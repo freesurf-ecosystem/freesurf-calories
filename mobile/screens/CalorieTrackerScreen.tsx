@@ -12,7 +12,7 @@ const WORKER_URL = "https://calorietracker.freesurf.tools";
 const LOG_KEY = "freesurf-calorie-log";
 const GOAL_KEY = "freesurf-calorie-goal";
 
-interface FoodItem { id: string; name: string; calories: number; protein: number; carbs: number; fat: number; }
+interface FoodItem { id: string; name: string; qty: string; calories: number; protein: number; carbs: number; fat: number; }
 interface MealEntry { id: string; items: FoodItem[]; imageUri?: string; ts: number; }
 
 export default function CalorieTrackerScreen() {
@@ -64,7 +64,7 @@ export default function CalorieTrackerScreen() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       const items: FoodItem[] = (data.items || []).map((it: any, i: number) => ({
-        id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", calories: it.calories || 0, protein: it.protein || 0, carbs: it.carbs || 0, fat: it.fat || 0,
+        id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", qty: it.qty || "", calories: it.calories || 0, protein: it.protein || 0, carbs: it.carbs || 0, fat: it.fat || 0,
       }));
       setEditEntry({ id: Date.now().toString(), items, imageUri: uri, ts: Date.now() });
     } catch (e: any) { Alert.alert("Error", e.message || "Analysis failed."); }
@@ -80,7 +80,7 @@ export default function CalorieTrackerScreen() {
     setEditEntry({ ...editEntry, items: editEntry.items.map((it) => it.id === id ? { ...it, [f]: f === "name" ? v : Number(v) || 0 } : it) });
   }
   function rmItem(id: string) { if (!editEntry) return; setEditEntry({ ...editEntry, items: editEntry.items.filter((i) => i.id !== id) }); }
-  function addItem() { if (!editEntry) return; setEditEntry({ ...editEntry, items: [...editEntry.items, { id: `m-${Date.now()}`, name: "", calories: 0, protein: 0, carbs: 0, fat: 0 }] }); }
+  function addItem() { if (!editEntry) return; setEditEntry({ ...editEntry, items: [...editEntry.items, { id: `m-${Date.now()}`, name: "", qty: "", calories: 0, protein: 0, carbs: 0, fat: 0 }] }); }
   function addManual() {
     const c = Number(manualItem.calories) || 0;
     if (!manualItem.name.trim() && c === 0) return;
@@ -102,7 +102,7 @@ export default function CalorieTrackerScreen() {
             {editEntry?.imageUri && <Image source={{ uri: editEntry.imageUri }} style={s.ei} resizeMode="cover" />}
             {editEntry?.items.map((item) => (
               <View key={item.id} style={s.eit}>
-                <View style={s.eir}><TextInput style={s.en} value={item.name} onChangeText={(v) => updItem(item.id, "name", v)} placeholder="Food name" placeholderTextColor="#5f6b7a" /><TouchableOpacity onPress={() => rmItem(item.id)}><Text style={s.er}>✕</Text></TouchableOpacity></View>
+                <View style={s.eir}><TextInput style={s.en} value={item.name} onChangeText={(v) => updItem(item.id, "name", v)} placeholder="Food name" placeholderTextColor="#5f6b7a" /><TextInput style={s.eq} value={item.qty} onChangeText={(v) => updItem(item.id, "qty", v)} placeholder="qty" placeholderTextColor="#5f6b7a" /><TouchableOpacity onPress={() => rmItem(item.id)}><Text style={s.er}>✕</Text></TouchableOpacity></View>
                 <View style={s.em}><MI l="Cal" v={item.calories} onChange={(v) => updItem(item.id, "calories", v)} /><MI l="Prot" v={item.protein} onChange={(v) => updItem(item.id, "protein", v)} /><MI l="Carbs" v={item.carbs} onChange={(v) => updItem(item.id, "carbs", v)} /><MI l="Fat" v={item.fat} onChange={(v) => updItem(item.id, "fat", v)} /></View>
               </View>
             ))}
@@ -178,7 +178,7 @@ const s = StyleSheet.create({
   cw: { flex: 1, backgroundColor: "#000" }, ca: { flex: 1 }, cx: { position: "absolute", top: 60, right: 20, zIndex: 10, padding: 8 }, cxt: { fontSize: 24, color: "#fff" }, ch: { flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 120 }, cht: { color: "rgba(255,255,255,0.5)", fontSize: 16, backgroundColor: "rgba(0,0,0,0.4)", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, overflow: "hidden" },
   ew: { flex: 1, backgroundColor: "#0b1020" }, eh: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, paddingTop: 56, backgroundColor: "#111937", borderBottomWidth: 1, borderBottomColor: "#2a3568" }, ec: { fontSize: 15, color: "#f87171" }, et: { fontSize: 16, fontWeight: "700", color: "#e8ecff" }, es: { fontSize: 15, fontWeight: "700", color: "#78e6c4" },
   eb: { flex: 1, padding: 20 }, ei: { width: "100%", height: 200, borderRadius: 14, marginBottom: 20 },
-  eit: { backgroundColor: "#111937", borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: "#2a3568" }, eir: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }, en: { flex: 1, fontSize: 15, color: "#e8ecff", fontWeight: "600", backgroundColor: "#0b1433", borderRadius: 8, padding: 10, borderWidth: 1, borderColor: "#2a3568" }, er: { fontSize: 18, color: "#f87171", padding: 4 },
+  eit: { backgroundColor: "#111937", borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: "#2a3568" }, eir: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }, en: { flex: 1, fontSize: 15, color: "#e8ecff", fontWeight: "600", backgroundColor: "#0b1433", borderRadius: 8, padding: 10, borderWidth: 1, borderColor: "#2a3568" }, eq: { width: 70, fontSize: 14, color: "#b3bddf", backgroundColor: "#0b1433", borderRadius: 8, padding: 10, borderWidth: 1, borderColor: "#2a3568", textAlign: "center" }, er: { fontSize: 18, color: "#f87171", padding: 4 },
   em: { flexDirection: "row", gap: 6 },
   ea: { backgroundColor: "#1e2a4a", borderRadius: 12, padding: 16, alignItems: "center", borderWidth: 1, borderColor: "#2a3568", borderStyle: "dashed", marginTop: 4 }, eat: { color: "#5b8cff", fontSize: 14, fontWeight: "600" },
   mo: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }, ms: { backgroundColor: "#111937", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 48 }, mt: { fontSize: 18, fontWeight: "700", color: "#e8ecff", marginBottom: 16 }, mi: { backgroundColor: "#0b1433", borderRadius: 12, padding: 14, fontSize: 15, color: "#e8ecff", borderWidth: 1, borderColor: "#2a3568", marginBottom: 16 },

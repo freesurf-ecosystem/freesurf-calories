@@ -40,14 +40,15 @@ SYSTEM_PROMPT = """You are a nutritionist. Analyze the food in this photo and re
 
 Each item must have:
 - name: short food name (e.g., "Cheeseburger")
-- calories: integer estimate
-- protein: grams (integer)
-- carbs: grams (integer)
-- fat: grams (integer)
+- qty: estimated quantity (e.g., "1", "2 slices", "12oz", "1 cup")
+- calories: integer estimate for the estimated quantity
+- protein: grams for the estimated quantity (integer)
+- carbs: grams for the estimated quantity (integer)
+- fat: grams for the estimated quantity (integer)
 
 If you can't identify a food, make your best guess. Return valid JSON only.
 
-Example: [{"name":"Caesar salad","calories":350,"protein":20,"carbs":15,"fat":25}]"""
+Example: [{"name":"Caesar salad","qty":"1 bowl","calories":350,"protein":20,"carbs":15,"fat":25},{"name":"Garlic bread","qty":"2 slices","calories":180,"protein":5,"carbs":22,"fat":8}]"""
 
 
 def get_model():
