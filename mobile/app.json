@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "FreeSurf Calorie Tracker",
+    "slug": "freesurf-calorie-tracker",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "freesurf-calorie-tracker",
+    "splash": { "backgroundColor": "#0b1020" },
+    "android": { "package": "tools.freesurf.calorietracker", "versionCode": 1 },
+    "ios": { "bundleIdentifier": "tools.freesurf.calorietracker" },
+    "extra": { "eas": { "projectId": "" } }
+  }
+}

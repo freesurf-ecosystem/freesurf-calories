@@ -1,0 +1,1 @@
+{"compilerOptions":{"strict":true,"jsx":"react-jsx","moduleResolution":"bundler","target":"ESNext","module":"ESNext","skipLibCheck":true,"esModuleInterop":true},"extends":"expo/tsconfig.base"}

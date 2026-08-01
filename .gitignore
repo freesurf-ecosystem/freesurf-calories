@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+.expo/
+android/
+ios/
+*.log
+.DS_Store
