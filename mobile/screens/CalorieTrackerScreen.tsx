@@ -7,6 +7,8 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../lib/supabase";
+import TopBar from "../components/TopBar";
 
 const WORKER_URL = "https://calorietracker.freesurf.tools";
 const LOG_KEY = "freesurf-calorie-log";
@@ -15,7 +17,9 @@ const GOAL_KEY = "freesurf-calorie-goal";
 interface FoodItem { id: string; name: string; qty: string; calories: number; protein: number; carbs: number; fat: number; }
 interface MealEntry { id: string; items: FoodItem[]; imageUri?: string; ts: number; }
 
-export default function CalorieTrackerScreen() {
+type Props = { isLoggedIn: boolean; onSignIn: () => void; };
+
+export default function CalorieTrackerScreen({ isLoggedIn, onSignIn }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [showCamera, setShowCamera] = useState(false);
   const [log, setLog] = useState<MealEntry[]>([]);
@@ -120,8 +124,16 @@ export default function CalorieTrackerScreen() {
         </View></View>
       </Modal>
 
-      <View style={s.h}><Text style={s.br}>FreeSurf</Text>
+      <View style={s.h}>
+        <TopBar
+          appName="FreeSurf Calorie Tracker"
+          isLoggedIn={isLoggedIn}
+          onSignIn={onSignIn}
+          onSignOut={async () => { await supabase.auth.signOut(); }}
+        />
+        <View style={s.hr}>
         <View style={s.tb}><TouchableOpacity onPress={() => setViewMode("day")} style={[s.t, viewMode === "day" && s.ta]}><Text style={[s.tt, viewMode === "day" && s.tta]}>Day</Text></TouchableOpacity><TouchableOpacity onPress={() => setViewMode("week")} style={[s.t, viewMode === "week" && s.ta]}><Text style={[s.tt, viewMode === "week" && s.tta]}>Week</Text></TouchableOpacity></View>
+        </View>
       </View>
 
       {viewMode === "day" ? (
@@ -157,7 +169,8 @@ const ms = StyleSheet.create({ w: { alignItems: "center", flex: 1 }, lb: { fontS
 
 const s = StyleSheet.create({
   c: { flex: 1, backgroundColor: "#0b1020" },
-  h: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, paddingTop: 56, backgroundColor: "#111937", borderBottomWidth: 1, borderBottomColor: "#2a3568" },
+  h: { padding: 16, paddingTop: 56, backgroundColor: "#111937", borderBottomWidth: 1, borderBottomColor: "#2a3568", gap: 10 },
+  hr: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   br: { fontSize: 13, fontWeight: "600", color: "#5b8cff" },
   tb: { flexDirection: "row", gap: 4 }, t: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }, ta: { backgroundColor: "#1e2a4a" }, tt: { fontSize: 14, color: "#5f6b7a", fontWeight: "500" }, tta: { color: "#e8ecff", fontWeight: "600" },
   b: { flex: 1 },
