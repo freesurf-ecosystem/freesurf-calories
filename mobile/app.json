@@ -8,7 +8,7 @@
     "scheme": "freesurf-calorie-tracker",
     "splash": { "backgroundColor": "#0b1020" },
     "android": { "package": "tools.freesurf.calorietracker", "versionCode": 1 },
-    "ios": { "bundleIdentifier": "tools.freesurf.calorietracker" },
+    "ios": { "bundleIdentifier": "tools.freesurf.calorietracker", "infoPlist": { "NSUserTrackingUsageDescription": "Your device identifier is used to serve personalized ads and keep FreeSurf free." } },
     "extra": { "eas": { "projectId": "" } }
   }
 }
