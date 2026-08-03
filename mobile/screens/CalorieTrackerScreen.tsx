@@ -9,8 +9,7 @@ import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
 import TopBar from "../components/TopBar";
-
-const WORKER_URL = "https://calorietracker.freesurf.tools";
+import { WORKER_URL } from "../lib/config";
 const LOG_KEY = "freesurf-calorie-log";
 const GOAL_KEY = "freesurf-calorie-goal";
 
