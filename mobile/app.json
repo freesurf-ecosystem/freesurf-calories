@@ -1,14 +1,62 @@
 {
   "expo": {
-    "name": "FreeSurf Calorie Tracker",
+    "name": "Calories",
     "slug": "freesurf-calorie-tracker",
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "freesurf-calorie-tracker",
-    "splash": { "backgroundColor": "#0b1020" },
-    "android": { "package": "tools.freesurf.calorietracker", "versionCode": 1 },
-    "ios": { "bundleIdentifier": "tools.freesurf.calorietracker", "infoPlist": { "NSUserTrackingUsageDescription": "Your device identifier is used to serve personalized ads and keep FreeSurf free." } },
-    "extra": { "eas": { "projectId": "" } }
+    "splash": {
+      "backgroundColor": "#0b1020"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "tools.freesurf.calorietracker",
+      "versionCode": 1
+    },
+    "ios": {
+      "bundleIdentifier": "tools.freesurf.calorietracker",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "Your device identifier is used to serve personalized ads and keep FreeSurf free."
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          }
+        ]
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b1750bbd-1b59-4310-918e-517d029e31cd"
+      }
+    },
+    "owner": "freesurf",
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "useLegacyPackaging": false
+          }
+        }
+      ]
+    ]
   }
 }

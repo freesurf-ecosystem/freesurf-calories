@@ -53,9 +53,9 @@ export default {
     }
 
     try {
-      const body = (await request.json()) as { image_base64: string };
-      if (!body.image_base64) {
-        return jsonResponse({ error: "No image data provided" }, 400, headers);
+      const body = (await request.json()) as { image_base64?: string; food_description?: string };
+      if (!body.image_base64 && !body.food_description) {
+        return jsonResponse({ error: "No image or description provided" }, 400, headers);
       }
 
       const runpodRes = await fetch(
@@ -66,7 +66,7 @@ export default {
             Authorization: `Bearer ${env.RUNPOD_API_KEY}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ input: { image_base64: body.image_base64 } }),
+          body: JSON.stringify({ input: { image_base64: body.image_base64 || "", food_description: body.food_description || "" } }),
         }
       );
 
