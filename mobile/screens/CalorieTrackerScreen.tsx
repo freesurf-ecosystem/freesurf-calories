@@ -343,14 +343,23 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       </ScrollView>
 
       <View style={{ position: "absolute", right: 16, bottom: 16, flexDirection: "row", backgroundColor: theme.colors.primaryContainer, borderRadius: 28, overflow: "hidden" }}>
-        <TouchableOpacity onPress={openCam} style={{ paddingHorizontal: 18, paddingVertical: 14, justifyContent: "center", alignItems: "center" }}>
-          <Camera size={22} color={theme.colors.onSurface} />
+        <TouchableOpacity onPress={openCam} disabled={isAnalyzing} style={{ paddingHorizontal: 18, paddingVertical: 14, justifyContent: "center", alignItems: "center" }}>
+          {isAnalyzing ? (
+            <ActivityIndicator size={22} color={theme.colors.onSurface} />
+          ) : (
+            <Camera size={22} color={theme.colors.onSurface} />
+          )}
         </TouchableOpacity>
         <View style={{ width: 1, backgroundColor: theme.colors.outline }} />
         <TouchableOpacity onPress={() => setShowAddManual(true)} style={{ paddingHorizontal: 18, paddingVertical: 14, justifyContent: "center", alignItems: "center" }}>
           <Pencil size={20} color={theme.colors.onSurface} />
         </TouchableOpacity>
       </View>
+      {isAnalyzing && (
+        <View style={{ position: "absolute", right: 16, bottom: 72, backgroundColor: theme.colors.surface, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: theme.colors.outline, elevation: 2 }}>
+          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Processing photo...</Text>
+        </View>
+      )}
     </View>
   );
 }

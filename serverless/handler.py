@@ -16,6 +16,7 @@ import time
 import traceback
 import sys
 import runpod
+from json_repair import repair_json
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
@@ -40,23 +41,19 @@ MODEL_ID = "meta-llama/Llama-3.2-11B-Vision-Instruct"
 _model = None
 _processor = None
 
-VISION_SYSTEM_PROMPT = """You are a nutritionist. Identify every food item visible in a photo. Respond with ONLY a JSON array — no markdown, no explanation, no code fences. Start with [ and end with ].
+VISION_SYSTEM_PROMPT = """Identify food in this photo. Output ONLY a valid JSON array — no markdown, no explanation.
 
-Each object must have exactly: name, amount, unit, calories, protein, carbs, fat.
+Fields per item: name, amount, unit, calories, protein, carbs, fat.
+Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl.
 
-Format examples (these show EXACTLY how to respond):
-Cheeseburger + fries photo: [{"name":"Cheeseburger","amount":1,"unit":"whole","calories":550,"protein":30,"carbs":40,"fat":30},{"name":"French Fries","amount":1.5,"unit":"cup","calories":540,"protein":7,"carbs":71,"fat":25}]
-Chicken rice broccoli photo: [{"name":"Grilled Chicken Breast","amount":1,"unit":"piece","calories":284,"protein":53,"carbs":0,"fat":6},{"name":"White Rice","amount":1,"unit":"cup","calories":205,"protein":4,"carbs":45,"fat":0},{"name":"Steamed Broccoli","amount":1,"unit":"cup","calories":55,"protein":4,"carbs":11,"fat":1}]
-Pizza slice photo: [{"name":"Pepperoni Pizza Slice","amount":1,"unit":"slice","calories":285,"protein":12,"carbs":36,"fat":10}]"""
+Example: [{"name":"Cheeseburger","amount":1,"unit":"whole","calories":550,"protein":30,"carbs":40,"fat":30},{"name":"Fries","amount":1.5,"unit":"cup","calories":540,"protein":7,"carbs":71,"fat":25}]"""
 
-TEXT_SYSTEM_PROMPT = """You are a nutrition database. Given a food description, respond with ONLY a JSON array — no markdown, no explanation.
+TEXT_SYSTEM_PROMPT = """Given a food description, output ONLY a valid JSON array — no markdown, no explanation.
 
-Each object: {"name":"...","amount":0,"unit":"...","calories":0,"protein":0,"carbs":0,"fat":0}
-Units: cup, oz, g, tbsp, tsp, slice, piece, bowl, whole
+Fields per item: name, amount, unit, calories, protein, carbs, fat.
+Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl.
 
-Examples:
-"burger and fries" → [{"name":"Cheeseburger","amount":1,"unit":"whole","calories":550,"protein":30,"carbs":40,"fat":30},{"name":"French Fries","amount":1.5,"unit":"cup","calories":540,"protein":7,"carbs":71,"fat":25}]
-"chicken caesar salad" → [{"name":"Chicken Caesar Salad","amount":1,"unit":"bowl","calories":510,"protein":35,"carbs":18,"fat":30}]"""
+Example: "burger and fries" → [{"name":"Cheeseburger","amount":1,"unit":"whole","calories":550,"protein":30,"carbs":40,"fat":30},{"name":"Fries","amount":1.5,"unit":"cup","calories":540,"protein":7,"carbs":71,"fat":25}]"""
 
 
 def get_model():
@@ -73,6 +70,7 @@ def get_model():
             MODEL_ID,
             quantization_config=quant,
             device_map="auto",
+            attn_implementation="flash_attention_2",
             token=os.environ.get("HF_TOKEN"),
         )
         _processor = AutoProcessor.from_pretrained(
@@ -93,18 +91,49 @@ def strip_markdown(text: str) -> str:
     return text.strip()
 
 
+def _repair_with_lib(text: str):
+    """Use json_repair to fix common LLM output errors."""
+    text = strip_markdown(text)
+
+    # Find array boundary — only repair the JSON portion
+    start = text.find('[')
+    if start == -1:
+        start = text.find('{')
+    if start == -1:
+        return None
+    end = text.rfind(']')
+    if end == -1:
+        end = text.rfind('}')
+    if end == -1:
+        return None
+
+    candidate = text[start:end + 1]
+    try:
+        repaired = repair_json(candidate)
+        parsed = json.loads(repaired)
+        return parsed if isinstance(parsed, list) else [parsed]
+    except Exception:
+        return None
+
+
 def parse_response(text: str):
     """Try multiple strategies to extract JSON from LLM output."""
     text = strip_markdown(text)
 
     strategies = [
+        # 0: json_repair lib — fixes missing quotes, unquoted keys, trailing commas, broken brackets, etc.
+        lambda t: _repair_with_lib(t),
         # 1: Look for [{...}] with balanced braces
         lambda t: _extract_balanced_array(t),
         # 2: Any [ followed by { up to the last }
         lambda t: re.search(r'\[\s*\{.*\}\s*\]', t, re.DOTALL),
-        # 3: Any [...] non-greedy
+        # 3: Try to repair missing } before ] — insert } then parse
+        lambda t: _extract_balanced_array(t, repair=True),
+        # 4: Repair garbled ["{", pattern — model sometimes inserts "{ as a string element
+        lambda t: _repair_garbled(t),
+        # 5: Any [...] non-greedy
         lambda t: re.search(r'\[.*?\]', t, re.DOTALL),
-        # 4: Raw text as JSON
+        # 6: Raw text as JSON
         lambda t: _try_raw_json(t),
     ]
 
@@ -124,8 +153,8 @@ def parse_response(text: str):
     return None
 
 
-def _extract_balanced_array(text: str):
-    """Extract JSON array by tracking brace depth."""
+def _extract_balanced_array(text: str, repair: bool = False):
+    """Extract JSON array by tracking brace depth. If repair=True, try inserting missing } before ]."""
     start = text.find('[')
     if start == -1:
         return None
@@ -141,7 +170,44 @@ def _extract_balanced_array(text: str):
                     parsed = json.loads(candidate)
                     return parsed if isinstance(parsed, list) else [parsed]
                 except Exception:
+                    if repair:
+                        repaired = candidate[:-1] + "}" + candidate[-1]
+                        try:
+                            parsed = json.loads(repaired)
+                            return parsed if isinstance(parsed, list) else [parsed]
+                        except Exception:
+                            pass
                     return None
+    return None
+
+
+def _repair_garbled(text: str):
+    """Handle malformed output like ["{","name":"Rice",...] — remove the stray "{" entry."""
+    # Find array candidate like _extract_balanced_array but with extra repair
+    start = text.find('[')
+    if start == -1:
+        return None
+    depth = 0
+    for i, ch in enumerate(text[start:], start):
+        if ch == '[':
+            depth += 1
+        elif ch == ']':
+            depth -= 1
+            if depth == 0:
+                candidate = text[start:i + 1]
+                try:
+                    return json.loads(candidate)
+                except Exception:
+                    pass
+                if candidate.startswith('["{",') or candidate.startswith('["{", '):
+                    inner = candidate[4:].strip().lstrip(",").strip()
+                    reconstructed = "[{" + inner[:-1] + "}]"
+                    try:
+                        parsed = json.loads(reconstructed)
+                        return parsed if isinstance(parsed, list) else [parsed]
+                    except Exception:
+                        pass
+                return None
     return None
 
 
@@ -187,15 +253,19 @@ def handler(event):
             text = processor.apply_chat_template(messages, add_generation_prompt=True)
             inputs = processor(text=text, return_tensors="pt").to(model.device)
 
-        output = model.generate(**inputs, max_new_tokens=512, temperature=0.2, do_sample=True)
+        output = model.generate(**inputs, max_new_tokens=400, temperature=0.2, do_sample=True)
         response = processor.decode(output[0], skip_special_tokens=True)
 
+        # Llama 3.2 uses: <|start_header_id|>assistant<|end_header_id|>
+        # Strip the full prompt, keep only assistant output
         assistant_part = response
-        if "assistant" in response:
-            parts = response.split("assistant")
-            assistant_part = parts[-1].strip()
-            if assistant_part.startswith("\n"):
-                assistant_part = assistant_part[1:]
+        for delimiter in ["<|start_header_id|>assistant<|end_header_id|>", "assistant\n", "assistant"]:
+            if delimiter in response:
+                parts = response.split(delimiter)
+                assistant_part = parts[-1].strip()
+                if assistant_part.startswith("\n"):
+                    assistant_part = assistant_part[1:]
+                break
 
         print(f"[LLM] Raw: {response[:500]}", flush=True)
 
