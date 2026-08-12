@@ -55,46 +55,108 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
   async function saveGoal(g: number) { setGoal(g); await AsyncStorage.setItem(GOAL_KEY, String(g)); }
 
   const todayMeals = log.filter((e) => isSameDay(new Date(e.ts), selectedDate));
-  const tc = todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories, 0), 0);
-  const tp = todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.protein, 0), 0);
-  const tcb = todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.carbs, 0), 0);
-  const tf = todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.fat, 0), 0);
+  const tc = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories * (Number(i.qty) || 1), 0), 0));
+  const tp = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.protein * (Number(i.qty) || 1), 0), 0) * 10) / 10;
+  const tcb = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.carbs * (Number(i.qty) || 1), 0), 0) * 10) / 10;
+  const tf = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.fat * (Number(i.qty) || 1), 0), 0) * 10) / 10;
   const rem = Math.max(0, goal - tc);
   const isToday = isSameDay(selectedDate, new Date());
 
   const wd = Array.from({ length: 7 }, (_, i) => {
     const d = subDays(new Date(), 6 - i);
-    const c = log.filter((e) => isSameDay(new Date(e.ts), d)).reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories, 0), 0);
+    const c = Math.round(log.filter((e) => isSameDay(new Date(e.ts), d)).reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories * (Number(i.qty) || 1), 0), 0));
     return { l: d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2), c, selected: isSameDay(d, selectedDate) };
   });
 
   async function openCam() {
-    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 });
-    if (!r.canceled && r.assets[0]) analyze(r.assets[0].uri);
+    console.log("[Camera] openCam called");
+    try {
+      console.log("[Camera] checking permissions...");
+      const perm = await ImagePicker.getCameraPermissionsAsync();
+      console.log("[Camera] permission status:", JSON.stringify(perm));
+      if (!perm.granted) {
+        console.log("[Camera] permission not granted, requesting...");
+        const req = await ImagePicker.requestCameraPermissionsAsync();
+        console.log("[Camera] request result:", JSON.stringify(req));
+        if (!req.granted) {
+          console.log("[Camera] permission denied");
+          Alert.alert("Camera access needed", "Please enable camera access in Settings to take food photos.");
+          return;
+        }
+      }
+      console.log("[Camera] launching camera...");
+      const r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 });
+      console.log("[Camera] launch result canceled:", r.canceled, "assets:", r.assets?.length ?? 0);
+      if (!r.canceled && r.assets[0]) {
+        console.log("[Camera] photo captured, uri:", r.assets[0].uri);
+        analyze(r.assets[0].uri);
+      } else {
+        console.log("[Camera] user cancelled or no assets");
+      }
+    } catch (e: any) {
+      console.log("[Camera] error:", e?.message || e, "stack:", e?.stack);
+      Alert.alert("Camera Error", e?.message || "Unable to open camera");
+    }
   }
   async function analyze(uri: string) {
+    console.log("[Analyze] called with uri:", uri);
     setIsAnalyzing(true);
     try {
+      console.log("[Analyze] reading file as base64...");
       const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image_base64: b64 }) });
-      const data = await res.json();
+      console.log("[Analyze] base64 length:", b64?.length ?? 0);
+      const body = JSON.stringify({ image_base64: b64 });
+      console.log("[Analyze] sending to:", `${WORKER_URL}/api/analyze`, "body size:", body.length);
+      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      console.log("[Analyze] response status:", res.status);
+      const text = await res.text();
+      console.log("[Analyze] response text (first 500):", text.slice(0, 500));
+      let data: any;
+      try { data = JSON.parse(text); } catch { throw new Error("Invalid JSON response from server"); }
       if (data.error) throw new Error(data.error);
       const items: FoodItem[] = (data.items || []).map((it: any, i: number) => ({
-        id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", qty: String(it.amount ?? it.qty ?? ""), unit: it.unit || "", calories: it.calories || 0, protein: it.protein || 0, carbs: it.carbs || 0, fat: it.fat || 0,
+        id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", qty: String(it.amount ?? it.qty ?? ""), unit: it.unit || "",
+        calories: Math.round(it.calories || 0), protein: Math.round((it.protein || 0) * 10) / 10, carbs: Math.round((it.carbs || 0) * 10) / 10, fat: Math.round((it.fat || 0) * 10) / 10,
       }));
+      console.log("[Analyze] parsed items count:", items.length);
       setEditEntry({ id: Date.now().toString(), items, imageUri: uri, ts: selectedDate.getTime() });
-    } catch (e: any) { Alert.alert("Error", e.message || "Analysis failed."); }
+    } catch (e: any) {
+      console.log("[Analyze] error:", e?.message || e, "stack:", e?.stack);
+      Alert.alert("Error", e.message || "Analysis failed.");
+    }
     finally { setIsAnalyzing(false); }
   }
   async function pickLib() {
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
     if (!r.canceled && r.assets[0]) analyze(r.assets[0].uri);
   }
-  function saveEdit() { if (!editEntry || editEntry.items.length === 0) return; saveLog([editEntry, ...log]); setEditEntry(null); }
-  function updItem(id: string, f: keyof FoodItem, v: string) {
+  function saveEdit() {
+    if (!editEntry || editEntry.items.length === 0) return;
+    const idx = log.findIndex((e) => e.id === editEntry.id);
+    const updated = idx >= 0 ? log.map((e) => (e.id === editEntry.id ? editEntry : e)) : [editEntry, ...log];
+    saveLog(updated);
+    setEditEntry(null);
+  }
+  function updItem(id: string, f: keyof FoodItem, v: string, srcItem?: FoodItem) {
     if (!editEntry) return;
     const isString = f === "name" || f === "qty" || f === "unit";
-    setEditEntry({ ...editEntry, items: editEntry.items.map((it) => it.id === id ? { ...it, [f]: isString ? v : Number(v) || 0 } : it) });
+    const isMacro = f === "calories" || f === "protein" || f === "carbs" || f === "fat";
+    setEditEntry({
+      ...editEntry,
+      items: editEntry.items.map((it) => {
+        if (it.id !== id) return it;
+        const qty = Number(it.qty) || 1;
+        let val: any = isString ? v : Number(v) || 0;
+        if (isMacro && srcItem) {
+          val = Math.round(((Number(v) || 0) / qty) * (f === "calories" ? 1 : 10)) / (f === "calories" ? 1 : 10);
+        }
+        const updated = { ...it, [f]: val };
+        if (f === "protein" || f === "carbs" || f === "fat") {
+          updated.calories = Math.round((updated.protein * 4) + (updated.carbs * 4) + (updated.fat * 9));
+        }
+        return updated;
+      })
+    });
   }
   function rmItem(id: string) { if (!editEntry) return; setEditEntry({ ...editEntry, items: editEntry.items.filter((i) => i.id !== id) }); }
   async function reEstimateItem(item: FoodItem) {
@@ -106,10 +168,10 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       if (data.error || !data.items?.[0]) { Alert.alert("Error", "Could not estimate nutrition."); return; }
       const est = data.items[0];
       updItem(item.id, "name", est.name || item.name);
-      updItem(item.id, "calories", String(est.calories || 0));
-      updItem(item.id, "protein", String(est.protein || 0));
-      updItem(item.id, "carbs", String(est.carbs || 0));
-      updItem(item.id, "fat", String(est.fat || 0));
+      updItem(item.id, "calories", String(est.calories || 0), item);
+      updItem(item.id, "protein", String(est.protein || 0), item);
+      updItem(item.id, "carbs", String(est.carbs || 0), item);
+      updItem(item.id, "fat", String(est.fat || 0), item);
     } catch (e: any) { Alert.alert("Error", e.message || "Estimation failed."); }
   }
   function addItem() { if (!editEntry) return; setEditEntry({ ...editEntry, items: [...editEntry.items, { id: `m-${Date.now()}`, name: "", qty: "", calories: 0, protein: 0, carbs: 0, fat: 0 }] }); }
@@ -199,10 +261,10 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
                     <IconButton icon="close" size={18} iconColor={theme.colors.error} onPress={() => rmItem(item.id)} />
                   </View>
                   <View style={{ flexDirection: "row", gap: 6 }}>
-                    <MI l="Cal" v={item.calories} onChange={(v) => updItem(item.id, "calories", v)} theme={theme} />
-                    <MI l="Prot" v={item.protein} onChange={(v) => updItem(item.id, "protein", v)} theme={theme} />
-                    <MI l="Carbs" v={item.carbs} onChange={(v) => updItem(item.id, "carbs", v)} theme={theme} />
-                    <MI l="Fat" v={item.fat} onChange={(v) => updItem(item.id, "fat", v)} theme={theme} />
+                    <MI l="Cal" v={Math.round(item.calories * (Number(item.qty) || 1))} onChange={(v) => updItem(item.id, "calories", v, item)} theme={theme} />
+                    <MI l="Prot" v={Math.round((item.protein * (Number(item.qty) || 1)) * 10) / 10} onChange={(v) => updItem(item.id, "protein", v, item)} theme={theme} />
+                    <MI l="Carbs" v={Math.round((item.carbs * (Number(item.qty) || 1)) * 10) / 10} onChange={(v) => updItem(item.id, "carbs", v, item)} theme={theme} />
+                    <MI l="Fat" v={Math.round((item.fat * (Number(item.qty) || 1)) * 10) / 10} onChange={(v) => updItem(item.id, "fat", v, item)} theme={theme} />
                   </View>
                 </Card.Content>
               </Card>
@@ -330,7 +392,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
                 <Text variant="bodyLarge" style={{ fontWeight: "600" }} numberOfLines={1}>
                   {e.items.map((i) => `${i.name}${i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ""})` : ""}`).join(", ")}
                 </Text>
-                <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{e.items.reduce((a, i) => a + i.calories, 0)} kcal</Text>
+                <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{Math.round(e.items.reduce((a, i) => a + i.calories * (Number(i.qty) || 1), 0))} kcal</Text>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <IconButton icon="pencil" size={18} onPress={() => setEditEntry({ ...e, items: e.items.map(it => ({...it})) })} />

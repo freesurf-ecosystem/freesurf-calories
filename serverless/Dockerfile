@@ -12,11 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m pip install --upgrade pip && \
     pip install huggingface_hub[hf_transfer]
 
-RUN --mount=type=secret,id=hf_token \
-    python3 -c "from huggingface_hub import snapshot_download; token = open('/run/secrets/hf_token').read().strip(); snapshot_download('meta-llama/Llama-3.2-11B-Vision-Instruct', token=token, cache_dir='/models/hub')"
+COPY download.py /download.py
+CMD python3 /download.py meta-llama/Llama-3.2-11B-Vision-Instruct /models/hub
 
 # Stage 2: Runtime — ~5GB, no model baked in
-FROM nvidia/cuda:12.4.0-runtime-ubuntu22.04
+FROM nvidia/cuda:12.4.0-devel-ubuntu22.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 python3.11-venv python3.11-dev python3-pip \
@@ -27,7 +27,8 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 
 RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 
-RUN pip install transformers accelerate bitsandbytes pillow runpod json-repair flash-attn --no-build-isolation
+RUN pip install packaging psutil && \
+    pip install transformers accelerate bitsandbytes pillow runpod json-repair
 
 COPY handler.py /handler.py
 

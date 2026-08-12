@@ -20,10 +20,25 @@
     "ios": {
       "bundleIdentifier": "tools.freesurf.calorietracker",
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "Your device identifier is used to serve personalized ads and keep FreeSurf free."
+        "NSCameraUsageDescription": "FreeSurf Calorie Tracker needs camera access to analyze food photos.",
+        "NSPhotoLibraryUsageDescription": "FreeSurf Calorie Tracker needs photo library access to analyze food photos.",
+        "NSUserTrackingUsageDescription": "Your device identifier is used to serve personalized ads and keep FreeSurf free.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
             "NSPrivacyAccessedAPITypeReasons": [
@@ -46,6 +61,8 @@
     },
     "owner": "freesurf",
     "plugins": [
+      "expo-image-picker",
+      "expo-tracking-transparency",
       [
         "expo-build-properties",
         {

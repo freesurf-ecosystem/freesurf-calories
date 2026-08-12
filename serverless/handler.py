@@ -41,19 +41,27 @@ MODEL_ID = "meta-llama/Llama-3.2-11B-Vision-Instruct"
 _model = None
 _processor = None
 
-VISION_SYSTEM_PROMPT = """Identify food in this photo. Output ONLY a valid JSON array — no markdown, no explanation.
+VISION_SYSTEM_PROMPT = """You are a nutrition database. Respond with ONLY a JSON array. No text before or after.
 
-Fields per item: name, amount, unit, calories, protein, carbs, fat.
-Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl.
+Format: [{"name":"food","amount":1,"unit":"whole","protein":30,"carbs":40,"fat":30}]
 
-Example: [{"name":"Cheeseburger","amount":1,"unit":"whole","calories":550,"protein":30,"carbs":40,"fat":30},{"name":"Fries","amount":1.5,"unit":"cup","calories":540,"protein":7,"carbs":71,"fat":25}]"""
+RULES:
+- FIRST character must be [
+- LAST character must be ]
+- NO markdown, NO explanation, NO "Here is...", NO notes
+- Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl
+- Calories are NOT needed — they are calculated from macros"""
 
-TEXT_SYSTEM_PROMPT = """Given a food description, output ONLY a valid JSON array — no markdown, no explanation.
+TEXT_SYSTEM_PROMPT = """You are a nutrition database. Respond with ONLY a JSON array. No text before or after.
 
-Fields per item: name, amount, unit, calories, protein, carbs, fat.
-Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl.
+Format: [{"name":"food","amount":1,"unit":"whole","protein":30,"carbs":40,"fat":30}]
 
-Example: "burger and fries" → [{"name":"Cheeseburger","amount":1,"unit":"whole","calories":550,"protein":30,"carbs":40,"fat":30},{"name":"Fries","amount":1.5,"unit":"cup","calories":540,"protein":7,"carbs":71,"fat":25}]"""
+RULES:
+- FIRST character must be [
+- LAST character must be ]
+- NO markdown, NO explanation, NO "Here is...", NO notes
+- Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl
+- Calories are NOT needed — they are calculated from macros"""
 
 
 def get_model():
@@ -65,14 +73,26 @@ def get_model():
         was_cached = os.path.isdir(repo_dir)
         print(f"Loading {MODEL_ID}... cached={was_cached}", flush=True)
 
-        quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
-        _model = MllamaForConditionalGeneration.from_pretrained(
-            MODEL_ID,
-            quantization_config=quant,
-            device_map="auto",
-            attn_implementation="flash_attention_2",
-            token=os.environ.get("HF_TOKEN"),
-        )
+        vram_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        if vram_gb >= 40:
+            print(f"VRAM {vram_gb:.0f}GB — loading in bfloat16 (no quantization needed)", flush=True)
+            _model = MllamaForConditionalGeneration.from_pretrained(
+                MODEL_ID,
+                torch_dtype=torch.bfloat16,
+                device_map="auto",
+                attn_implementation="sdpa",
+                token=os.environ.get("HF_TOKEN"),
+            )
+        else:
+            print(f"VRAM {vram_gb:.0f}GB — using 4-bit quantization", flush=True)
+            quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
+            _model = MllamaForConditionalGeneration.from_pretrained(
+                MODEL_ID,
+                quantization_config=quant,
+                device_map="auto",
+                attn_implementation="sdpa",
+                token=os.environ.get("HF_TOKEN"),
+            )
         _processor = AutoProcessor.from_pretrained(
             MODEL_ID,
             token=os.environ.get("HF_TOKEN"),
@@ -131,9 +151,11 @@ def parse_response(text: str):
         lambda t: _extract_balanced_array(t, repair=True),
         # 4: Repair garbled ["{", pattern — model sometimes inserts "{ as a string element
         lambda t: _repair_garbled(t),
-        # 5: Any [...] non-greedy
+        # 5: Fallback: parse markdown-style nutrition lists (model ignores JSON instruction)
+        lambda t: _parse_markdown_nutrition(t),
+        # 6: Any [...] non-greedy
         lambda t: re.search(r'\[.*?\]', t, re.DOTALL),
-        # 6: Raw text as JSON
+        # 7: Raw text as JSON
         lambda t: _try_raw_json(t),
     ]
 
@@ -142,15 +164,25 @@ def parse_response(text: str):
         if result is None:
             continue
         if isinstance(result, list):
-            return result
+            return _calc_calories(result)
         if hasattr(result, 'group'):
             try:
                 parsed = json.loads(result.group(0))
-                return parsed if isinstance(parsed, list) else [parsed]
+                parsed = parsed if isinstance(parsed, list) else [parsed]
+                return _calc_calories(parsed)
             except Exception:
                 pass
 
     return None
+
+
+def _calc_calories(items):
+    for item in items:
+        p = float(item.get("protein", 0) or 0)
+        c = float(item.get("carbs", 0) or 0)
+        f = float(item.get("fat", 0) or 0)
+        item["calories"] = round(p * 4 + c * 4 + f * 9)
+    return items
 
 
 def _extract_balanced_array(text: str, repair: bool = False):
@@ -209,6 +241,65 @@ def _repair_garbled(text: str):
                         pass
                 return None
     return None
+
+
+def _parse_markdown_nutrition(text: str):
+    """Fallback: extract nutrition from markdown lists when model ignores JSON prompt.
+    Handles patterns like:
+      * Lay's Classic potato chips:
+        + Calories: 60 per serving (1 ounce)
+        + Total fat: 3.5g
+        * Carbohydrates: 15g
+    """
+    items = []
+    food_pattern = re.compile(r'[\*\-\+]\s*(.+?)\s*:?\s*$')
+    macro_pattern = re.compile(r'(?:Calories?|Protein|Carb(?:ohydrate)?s?|Fat|Total fat)[:\s]*([\d.]+)\s*(?:g|grams?)?', re.IGNORECASE)
+
+    lines = text.split('\n')
+    current = None
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        food_match = food_pattern.match(stripped)
+        if food_match and not any(kw in stripped.lower() for kw in ['calories', 'protein', 'carb', 'fat', 'total']):
+            if current and current.get('name'):
+                _fill_macros_from_text(current, '\n'.join(current.pop('_raw', [])))
+                items.append(current)
+            current = {'name': food_match.group(1).strip(), '_raw': []}
+            continue
+        if current:
+            current.setdefault('_raw', []).append(stripped)
+
+    if current and current.get('name'):
+        _fill_macros_from_text(current, '\n'.join(current.pop('_raw', [])))
+        items.append(current)
+
+    return items if items else None
+
+
+def _fill_macros_from_text(item, text):
+    macro_pattern = re.compile(r'Calories?[:\s]*([\d.]+)', re.IGNORECASE)
+    protein_pattern = re.compile(r'Protein[:\s]*([\d.]+)', re.IGNORECASE)
+    carbs_pattern = re.compile(r'Carb(?:ohydrate)?s?[:\s]*([\d.]+)', re.IGNORECASE)
+    fat_pattern = re.compile(r'(?:Total )?Fat[:\s]*([\d.]+)', re.IGNORECASE)
+
+    for pattern, key in [(protein_pattern, 'protein'), (carbs_pattern, 'carbs'), (fat_pattern, 'fat')]:
+        m = pattern.search(text)
+        if m:
+            try:
+                item[key] = round(float(m.group(1)) * 10) / 10
+            except ValueError:
+                pass
+
+    if not item.get('protein') and not item.get('carbs') and not item.get('fat'):
+        return
+
+    item.setdefault('protein', 0)
+    item.setdefault('carbs', 0)
+    item.setdefault('fat', 0)
+    item['amount'] = 1
+    item['unit'] = 'whole'
 
 
 def _try_raw_json(text: str):
