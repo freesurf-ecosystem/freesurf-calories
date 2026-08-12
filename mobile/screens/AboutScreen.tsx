@@ -4,12 +4,12 @@ import { Text, Button, Surface, useTheme, IconButton } from "react-native-paper"
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TOOLS = [
-  { name: "Natural Reader", desc: "Text-to-speech with 40+ voices" },
-  { name: "Transcriber", desc: "Speech-to-text with speaker diarization" },
-  { name: "Calorie Tracker", desc: "AI-powered food logging" },
+  { name: "Natural Reader", desc: "Free text-to-speech with 40+ voices" },
+  { name: "Transcriber", desc: "Free speech-to-text with speaker diarization" },
+  { name: "Calorie Tracker", desc: "Free AI-powered food logging" },
   { name: "Invoices", desc: "Free invoice generator" },
-  { name: "Links", desc: "Link-in-bio pages" },
-  { name: "Post", desc: "Cross-posting tool" },
+  { name: "Links", desc: "Free link-in-bio pages" },
+  { name: "Post", desc: "Free cross-posting tool" },
 ];
 
 type Props = { onBack: () => void };

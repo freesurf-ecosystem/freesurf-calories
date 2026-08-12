@@ -177,12 +177,16 @@ def parse_response(text: str):
 
 
 def _calc_calories(items):
+    result = []
     for item in items:
+        if not isinstance(item, dict):
+            continue
         p = float(item.get("protein", 0) or 0)
         c = float(item.get("carbs", 0) or 0)
         f = float(item.get("fat", 0) or 0)
         item["calories"] = round(p * 4 + c * 4 + f * 9)
-    return items
+        result.append(item)
+    return result
 
 
 def _extract_balanced_array(text: str, repair: bool = False):

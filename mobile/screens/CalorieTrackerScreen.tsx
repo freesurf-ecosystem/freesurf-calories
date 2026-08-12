@@ -205,7 +205,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
     const cb = Number(manualItem.carbs) || 0;
     const f = Number(manualItem.fat) || 0;
     const estimatedCal = cal > 0 ? cal : (p * 4 + cb * 4 + f * 9);
-    if (!manualItem.name.trim() || estimatedCal === 0) { Alert.alert("Missing info", "Add a food name and calories, or tap Look up to estimate."); return; }
+    if (!manualItem.name.trim() || estimatedCal === 0) { Alert.alert("Missing info", "Calories are empty — please enter manually or tap 'Look up calories' above."); return; }
     saveLog([{ id: Date.now().toString(), items: [{ id: `man-${Date.now()}`, name: manualItem.name.trim() || "Quick add", qty: manualItem.qty || "", unit: manualItem.unit || "", calories: estimatedCal, protein: p, carbs: cb, fat: f }], ts: selectedDate.getTime() }, ...log]);
     setShowAddManual(false); setManualItem({ name: "", qty: "1", unit: "cup", calories: "", protein: "", carbs: "", fat: "" });
   }
@@ -276,9 +276,9 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
 
       {/* Quick add modal */}
       <Modal visible={showAddManual} transparent animationType="fade">
-        <KeyboardAvoidingView style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", padding: 24 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <Surface style={{ borderRadius: 16, padding: 20, maxHeight: "80%" }}>
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "85%" }}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
             <Text variant="titleLarge" style={{ fontWeight: "700", marginBottom: 16 }}>Quick Add</Text>
             <TextInput mode="outlined" label="Food name" value={manualItem.name} onChangeText={(v) => setManualItem({ ...manualItem, name: v })} style={{ marginBottom: 12 }} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -297,8 +297,8 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
               <Button mode="contained" style={{ flex: 1 }} onPress={addManual}>Add</Button>
             </View>
             </ScrollView>
-          </Surface>
-        </KeyboardAvoidingView>
+          </View>
+        </View>
       </Modal>
 
       {/* Date Selector Header */}
