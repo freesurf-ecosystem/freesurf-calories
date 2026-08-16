@@ -2,6 +2,10 @@ name = "freesurf-calorie-tracker"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+routes = [
+  { pattern = "calories.freesurf.tools", zone_name = "freesurf.tools", custom_domain = true }
+]
+
 [vars]
 ENVIRONMENT = "production"
 
