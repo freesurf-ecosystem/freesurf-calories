@@ -6,5 +6,4 @@ compatibility_date = "2024-12-01"
 ENVIRONMENT = "production"
 
 # Secrets to set via `wrangler secret put`:
-#   RUNPOD_API_KEY       — your RunPod API key
-#   RUNPOD_ENDPOINT_ID   — the vision LLM serverless endpoint ID
+#   POD_URL   — the consolidated AI pod URL (e.g. https://<pod-id>-8000.proxy.runpod.net)

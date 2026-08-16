@@ -8,3 +8,5 @@ android/
 ios/
 *.log
 .DS_Store
+mobile/credentials.json
+mobile/credentials/
