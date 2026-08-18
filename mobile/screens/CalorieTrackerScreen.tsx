@@ -55,16 +55,16 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
   async function saveGoal(g: number) { setGoal(g); await AsyncStorage.setItem(GOAL_KEY, String(g)); }
 
   const todayMeals = log.filter((e) => isSameDay(new Date(e.ts), selectedDate));
-  const tc = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories * (Number(i.qty) || 1), 0), 0));
-  const tp = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.protein * (Number(i.qty) || 1), 0), 0) * 10) / 10;
-  const tcb = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.carbs * (Number(i.qty) || 1), 0), 0) * 10) / 10;
-  const tf = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.fat * (Number(i.qty) || 1), 0), 0) * 10) / 10;
+  const tc = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories, 0), 0));
+  const tp = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.protein, 0), 0) * 10) / 10;
+  const tcb = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.carbs, 0), 0) * 10) / 10;
+  const tf = Math.round(todayMeals.reduce((s, e) => s + e.items.reduce((a, i) => a + i.fat, 0), 0) * 10) / 10;
   const rem = Math.max(0, goal - tc);
   const isToday = isSameDay(selectedDate, new Date());
 
   const wd = Array.from({ length: 7 }, (_, i) => {
     const d = subDays(new Date(), 6 - i);
-    const c = Math.round(log.filter((e) => isSameDay(new Date(e.ts), d)).reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories * (Number(i.qty) || 1), 0), 0));
+    const c = Math.round(log.filter((e) => isSameDay(new Date(e.ts), d)).reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories, 0), 0));
     return { l: d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2), c, selected: isSameDay(d, selectedDate) };
   });
 
@@ -114,13 +114,10 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       let data: any;
       try { data = JSON.parse(text); } catch { throw new Error("Invalid JSON response from server"); }
       if (data.error) throw new Error(data.error);
-      const items: FoodItem[] = (data.items || []).map((it: any, i: number) => {
-        const amount = Number(it.amount) || 1;
-        return {
-          id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", qty: String(it.amount ?? it.qty ?? ""), unit: it.unit || "",
-          calories: Math.round((it.calories || 0) / amount), protein: Math.round(((it.protein || 0) / amount) * 10) / 10, carbs: Math.round(((it.carbs || 0) / amount) * 10) / 10, fat: Math.round(((it.fat || 0) / amount) * 10) / 10,
-        };
-      });
+      const items: FoodItem[] = (data.items || []).map((it: any, i: number) => ({
+        id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", qty: String(it.amount ?? it.qty ?? ""), unit: it.unit || "",
+        calories: Math.round(it.calories || 0), protein: Math.round((it.protein || 0) * 10) / 10, carbs: Math.round((it.carbs || 0) * 10) / 10, fat: Math.round((it.fat || 0) * 10) / 10,
+      }));
       console.log("[Analyze] parsed items count:", items.length);
       setEditEntry({ id: Date.now().toString(), items, imageUri: uri, ts: selectedDate.getTime() });
     } catch (e: any) {
@@ -143,16 +140,11 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
   function updItem(id: string, f: keyof FoodItem, v: string, srcItem?: FoodItem) {
     if (!editEntry) return;
     const isString = f === "name" || f === "qty" || f === "unit";
-    const isMacro = f === "calories" || f === "protein" || f === "carbs" || f === "fat";
     setEditEntry({
       ...editEntry,
       items: editEntry.items.map((it) => {
         if (it.id !== id) return it;
-        const qty = Number(it.qty) || 1;
         let val: any = isString ? v : Number(v) || 0;
-        if (isMacro && srcItem) {
-          val = Math.round(((Number(v) || 0) / qty) * (f === "calories" ? 1 : 10)) / (f === "calories" ? 1 : 10);
-        }
         const updated = { ...it, [f]: val };
         if (f === "protein" || f === "carbs" || f === "fat") {
           updated.calories = Math.round((updated.protein * 4) + (updated.carbs * 4) + (updated.fat * 9));
@@ -188,14 +180,13 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       if (data.error) throw new Error(data.error);
       const item = (data.items || [])[0];
       if (item) {
-        const amount = Number(manualItem.qty) || 1;
         setManualItem(prev => ({
           ...prev,
           name: item.name || prev.name,
-          calories: String(Math.round((item.calories || 0) / amount)),
-          protein: String(Math.round(((item.protein || 0) / amount) * 10) / 10),
-          carbs: String(Math.round(((item.carbs || 0) / amount) * 10) / 10),
-          fat: String(Math.round(((item.fat || 0) / amount) * 10) / 10),
+          calories: String(item.calories || 0),
+          protein: String(item.protein || 0),
+          carbs: String(item.carbs || 0),
+          fat: String(item.fat || 0),
         }));
       } else {
         Alert.alert("Not found", "Could not estimate nutrition for this food.");
@@ -265,10 +256,10 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
                     <IconButton icon="close" size={18} iconColor={theme.colors.error} onPress={() => rmItem(item.id)} />
                   </View>
                   <View style={{ flexDirection: "row", gap: 6 }}>
-                    <MI l="Cal" v={Math.round(item.calories * (Number(item.qty) || 1))} onChange={(v) => updItem(item.id, "calories", v, item)} theme={theme} />
-                    <MI l="Prot" v={Math.round((item.protein * (Number(item.qty) || 1)) * 10) / 10} onChange={(v) => updItem(item.id, "protein", v, item)} theme={theme} />
-                    <MI l="Carbs" v={Math.round((item.carbs * (Number(item.qty) || 1)) * 10) / 10} onChange={(v) => updItem(item.id, "carbs", v, item)} theme={theme} />
-                    <MI l="Fat" v={Math.round((item.fat * (Number(item.qty) || 1)) * 10) / 10} onChange={(v) => updItem(item.id, "fat", v, item)} theme={theme} />
+                    <MI l="Cal" v={Math.round(item.calories)} onChange={(v) => updItem(item.id, "calories", v, item)} theme={theme} />
+                    <MI l="Prot" v={Math.round(item.protein * 10) / 10} onChange={(v) => updItem(item.id, "protein", v, item)} theme={theme} />
+                    <MI l="Carbs" v={Math.round(item.carbs * 10) / 10} onChange={(v) => updItem(item.id, "carbs", v, item)} theme={theme} />
+                    <MI l="Fat" v={Math.round(item.fat * 10) / 10} onChange={(v) => updItem(item.id, "fat", v, item)} theme={theme} />
                   </View>
                 </Card.Content>
               </Card>
@@ -396,7 +387,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
                 <Text variant="bodyLarge" style={{ fontWeight: "600" }} numberOfLines={1}>
                   {e.items.map((i) => `${i.name}${i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ""})` : ""}`).join(", ")}
                 </Text>
-                <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{Math.round(e.items.reduce((a, i) => a + i.calories * (Number(i.qty) || 1), 0))} kcal</Text>
+                <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{Math.round(e.items.reduce((a, i) => a + i.calories, 0))} kcal</Text>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <IconButton icon="pencil" size={18} onPress={() => setEditEntry({ ...e, items: e.items.map(it => ({...it})) })} />
