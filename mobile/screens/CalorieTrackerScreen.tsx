@@ -114,10 +114,13 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       let data: any;
       try { data = JSON.parse(text); } catch { throw new Error("Invalid JSON response from server"); }
       if (data.error) throw new Error(data.error);
-      const items: FoodItem[] = (data.items || []).map((it: any, i: number) => ({
-        id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", qty: String(it.amount ?? it.qty ?? ""), unit: it.unit || "",
-        calories: Math.round(it.calories || 0), protein: Math.round((it.protein || 0) * 10) / 10, carbs: Math.round((it.carbs || 0) * 10) / 10, fat: Math.round((it.fat || 0) * 10) / 10,
-      }));
+      const items: FoodItem[] = (data.items || []).map((it: any, i: number) => {
+        const amount = Number(it.amount) || 1;
+        return {
+          id: `ai-${Date.now()}-${i}`, name: it.name || "Unknown", qty: String(it.amount ?? it.qty ?? ""), unit: it.unit || "",
+          calories: Math.round((it.calories || 0) / amount), protein: Math.round(((it.protein || 0) / amount) * 10) / 10, carbs: Math.round(((it.carbs || 0) / amount) * 10) / 10, fat: Math.round(((it.fat || 0) / amount) * 10) / 10,
+        };
+      });
       console.log("[Analyze] parsed items count:", items.length);
       setEditEntry({ id: Date.now().toString(), items, imageUri: uri, ts: selectedDate.getTime() });
     } catch (e: any) {
@@ -185,13 +188,14 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       if (data.error) throw new Error(data.error);
       const item = (data.items || [])[0];
       if (item) {
+        const amount = Number(manualItem.qty) || 1;
         setManualItem(prev => ({
           ...prev,
           name: item.name || prev.name,
-          calories: String(item.calories || 0),
-          protein: String(item.protein || 0),
-          carbs: String(item.carbs || 0),
-          fat: String(item.fat || 0),
+          calories: String(Math.round((item.calories || 0) / amount)),
+          protein: String(Math.round(((item.protein || 0) / amount) * 10) / 10),
+          carbs: String(Math.round(((item.carbs || 0) / amount) * 10) / 10),
+          fat: String(Math.round(((item.fat || 0) / amount) * 10) / 10),
         }));
       } else {
         Alert.alert("Not found", "Could not estimate nutrition for this food.");
