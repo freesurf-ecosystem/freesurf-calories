@@ -31,6 +31,54 @@ function jsonResponse(data: unknown, status: number, headers: Record<string, str
   });
 }
 
+function htmlResponse(html: string, headers: Record<string, string>) {
+  return new Response(html, { status: 200, headers: { ...headers, "Content-Type": "text/html; charset=utf-8" } });
+}
+
+const LANDING_HTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI Calorie Tracker · FreeSurf</title>
+<meta name="description" content="Photograph your meal and get an instant estimate of calories, protein, carbs, and fat."/>
+<style>
+  :root { color-scheme: light dark; --bg:#ffffff; --text:#1d1b18; --muted:#8a8178; --brand:#1d1b18; --border:#e6e4df; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0a0a0c; --text:#fff; --muted:#8b8b9a; --brand:#6b8cff; --border:#2c2c3a; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:880px; margin:0 auto; padding:64px 24px; }
+  .logo { font-weight:700; text-decoration:none; color:var(--text); }
+  h1 { font-size:44px; line-height:1.1; margin:40px 0 12px; }
+  .lede { font-size:18px; color:var(--muted); margin:0 0 28px; }
+  .phone { border:2px dashed var(--border); border-radius:20px; height:300px; display:flex; align-items:center; justify-content:center; color:var(--muted); margin:32px 0; }
+  .stores { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:40px; }
+  .store { text-decoration:none; padding:12px 20px; border-radius:10px; border:1.5px solid var(--border); color:var(--text); font-weight:600; }
+  .store.play { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .store.soon { opacity:.55; cursor:default; }
+  footer { margin-top:48px; padding-top:20px; border-top:1px solid var(--border); color:var(--muted); font-size:14px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  footer a { color:var(--muted); text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="logo" href="https://freesurf.tools">FreeSurf</a>
+  <h1>AI Calorie Tracker</h1>
+  <p class="lede">Snap a photo of your meal and get an instant estimate of calories, protein, carbs, and fat — no manual logging.</p>
+  <div class="phone">Phone screenshots coming soon</div>
+  <div class="stores">
+    <a class="store play" href="https://play.google.com/store/apps/details?id=tools.freesurf.calorietracker" target="_blank" rel="noopener">Get it on Google Play</a>
+    <span class="store soon">App Store · Upcoming</span>
+  </div>
+  <footer>
+    <span>&copy; <span id="year"></span> FreeSurf · Free tools, no bullshit.</span>
+    <a href="https://feedfree.tech" target="_blank" rel="noopener">Feedfree Digest</a>
+  </footer>
+</div>
+<script>document.getElementById('year').textContent=new Date().getFullYear()</script>
+</body>
+</html>`;
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -39,6 +87,11 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers });
+    }
+
+    // Landing page for browsers; keep the API on /api/analyze.
+    if (request.method === "GET") {
+      return htmlResponse(LANDING_HTML, headers);
     }
 
     if (request.method !== "POST" || url.pathname !== "/api/analyze") {
