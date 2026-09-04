@@ -4,6 +4,92 @@
  */
 export interface Env {
   POD_URL: string;
+  TOGETHER_API_KEY?: string;
+  TOGETHER_MODEL?: string;
+}
+
+// Nutrition prompt shared with the self-hosted pod (kept identical so output matches).
+const NUTRITION_SYSTEM_PROMPT = `You are a nutrition database. Respond with ONLY a JSON array. No text before or after.
+
+Format: [{"name":"food","amount":1,"unit":"whole","protein":30,"carbs":40,"fat":30}]
+
+RULES:
+- FIRST character must be [
+- LAST character must be ]
+- NO markdown, NO explanation, NO "Here is...", NO notes
+- Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl
+- Calories are NOT needed — they are calculated from macros`;
+
+// Detect the MIME type of a base64 image from its leading signature bytes so we can
+// build a correct data: URI for vision APIs.
+function sniffImageMime(base64: string): string {
+  if (/^\/9j/.test(base64)) return "image/jpeg";          // JPEG
+  if (/^iVBORw0KGgo/.test(base64)) return "image/png";     // PNG
+  if (/^UklGR/.test(base64)) return "image/webp";          // WEBP (RIFF)
+  if (/^R0lGOD/.test(base64)) return "image/gif";          // GIF
+  return "image/jpeg";
+}
+
+function calcCalories(items: any[]): any[] {
+  return items.map((it) => {
+    const p = Number(it?.protein) || 0;
+    const c = Number(it?.carbs) || 0;
+    const f = Number(it?.fat) || 0;
+    return { ...it, calories: Math.round(p * 4 + c * 4 + f * 9) };
+  });
+}
+
+function parseItems(text: string): any[] | null {
+  const clean = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const start = clean.indexOf("[");
+  const end = clean.lastIndexOf("]");
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    const parsed = JSON.parse(clean.slice(start, end + 1));
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map((it) => (typeof it === "object" && it ? it : null)).filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+async function analyzeWithTogether(
+  imageBase64: string,
+  foodDescription: string,
+  env: Env
+): Promise<{ items: any[] }> {
+  const model = env.TOGETHER_MODEL || "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo";
+  const content: any[] = [];
+  if (imageBase64) {
+    content.push({ type: "image_url", image_url: { url: `data:${sniffImageMime(imageBase64)};base64,${imageBase64}` } });
+    content.push({ type: "text", text: "What are the nutrition facts for each food in this photo?" });
+  } else {
+    content.push({ type: "text", text: `Estimate nutrition for: ${foodDescription}` });
+  }
+
+  const res = await fetch("https://api.together.xyz/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.TOGETHER_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      max_tokens: 800,
+      messages: [{ role: "system", content: NUTRITION_SYSTEM_PROMPT }, { role: "user", content }],
+    }),
+  });
+  const data = (await res.json()) as any;
+  if (!res.ok) {
+    throw new Error(data?.error?.message || data?.message || `Together error ${res.status}`);
+  }
+  const contentText = data?.choices?.[0]?.message?.content || "";
+  const items = parseItems(contentText);
+  if (!items) {
+    throw new Error("Model did not return valid JSON");
+  }
+  return { items: calcCalories(items) };
 }
 
 const ALLOWED_ORIGINS = [
@@ -98,7 +184,7 @@ export default {
       return jsonResponse({ error: "Not found" }, 404, headers);
     }
 
-    if (!env.POD_URL) {
+    if (!env.POD_URL && !env.TOGETHER_API_KEY) {
       return jsonResponse({ error: "Service not configured" }, 500, headers);
     }
 
@@ -106,6 +192,13 @@ export default {
       const body = (await request.json()) as { image_base64?: string; food_description?: string };
       if (!body.image_base64 && !body.food_description) {
         return jsonResponse({ error: "No image or description provided" }, 400, headers);
+      }
+
+      // Hosted Together AI path (vision LLM). Falls back to the self-hosted pod when
+      // no key is set, so this is a safe per-app flag.
+      if (env.TOGETHER_API_KEY) {
+        const data = await analyzeWithTogether(body.image_base64 || "", body.food_description || "", env);
+        return jsonResponse(data, 200, headers);
       }
 
       const podRes = await fetch(env.POD_URL, {

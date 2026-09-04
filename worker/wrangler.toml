@@ -11,3 +11,5 @@ ENVIRONMENT = "production"
 
 # Secrets to set via `wrangler secret put`:
 #   POD_URL   — the consolidated AI pod URL (e.g. https://<pod-id>-8000.proxy.runpod.net)
+#   TOGETHER_API_KEY — when set, analysis runs on Together AI (hosted) instead of the pod
+#   TOGETHER_MODEL   — optional hosted vision model override (default meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo)
