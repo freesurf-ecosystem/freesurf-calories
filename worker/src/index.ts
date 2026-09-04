@@ -177,6 +177,13 @@ export default {
 
     // Landing page for browsers; keep the API on /api/analyze.
     if (request.method === "GET") {
+      if (url.pathname === "/sitemap.xml") {
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://calories.freesurf.tools/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
+</urlset>`;
+        return new Response(xml, { status: 200, headers: { "Content-Type": "application/xml" } });
+      }
       return htmlResponse(LANDING_HTML, headers);
     }
 
