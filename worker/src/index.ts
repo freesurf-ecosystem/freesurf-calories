@@ -6,6 +6,46 @@ export interface Env {
   POD_URL: string;
   TOGETHER_API_KEY?: string;
   TOGETHER_MODEL?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  CALORIE_WEEKLY_LIMIT?: string;
+}
+
+const CALORIE_METRIC = "calorie_requests";
+const DEFAULT_WEEKLY_LIMIT = 10;
+
+function srHeaders(env: Env): Record<string, string> {
+  return { apikey: env.SUPABASE_SERVICE_ROLE_KEY || "", Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY || ""}` };
+}
+function weekStartIso(now: Date): string {
+  const day = (now.getUTCDay() + 6) % 7;
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day)).toISOString().slice(0, 10);
+}
+async function authedUserId(env: Env, authHeader: string): Promise<string | null> {
+  if (!authHeader.startsWith("Bearer ") || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null;
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, { headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: authHeader } });
+    if (!res.ok) return null;
+    return ((await res.json()) as { id?: string })?.id || null;
+  } catch { return null; }
+}
+async function readUsage(env: Env, userId: string, metric: string, week: string): Promise<number> {
+  try {
+    const q = new URLSearchParams({ user_id: `eq.${userId}`, metric: `eq.${metric}`, week_start: `eq.${week}`, select: "count" });
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/usage?${q.toString()}`, { headers: srHeaders(env) });
+    if (!res.ok) return 0;
+    return Number(((await res.json()) as any[])?.[0]?.count) || 0;
+  } catch { return 0; }
+}
+async function incrementUsage(env: Env, userId: string, metric: string, week: string, delta: number): Promise<number> {
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/meter_usage`, {
+    method: "POST", headers: { ...srHeaders(env), "Content-Type": "application/json" },
+    body: JSON.stringify({ p_user_id: userId, p_metric: metric, p_week: week, p_delta: delta }),
+  });
+  if (!res.ok) return 0;
+  const n = Number(await res.text());
+  return Number.isFinite(n) ? n : 0;
 }
 
 // Nutrition prompt shared with the self-hosted pod (kept identical so output matches).
@@ -105,8 +145,8 @@ function corsHeaders(origin: string): Record<string, string> {
   );
   return {
     "Access-Control-Allow-Origin": allowed ? origin : "",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 }
 
@@ -184,6 +224,18 @@ export default {
 </urlset>`;
         return new Response(xml, { status: 200, headers: { "Content-Type": "application/xml" } });
       }
+      // Usage meter — how much of the weekly allowance is left.
+      if (url.pathname === "/api/usage") {
+        if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.SUPABASE_URL) {
+          return jsonResponse({ error: "Usage metering not configured" }, 500, headers);
+        }
+        const userId = await authedUserId(env, request.headers.get("Authorization") || "");
+        if (!userId) return jsonResponse({ error: "Unauthorized" }, 401, headers);
+        const week = weekStartIso(new Date());
+        const limit = Math.max(0, Number(env.CALORIE_WEEKLY_LIMIT) || DEFAULT_WEEKLY_LIMIT);
+        const used = await readUsage(env, userId, CALORIE_METRIC, week);
+        return jsonResponse({ usage: { metric: CALORIE_METRIC, used, limit, reset: week } }, 200, headers);
+      }
       return htmlResponse(LANDING_HTML, headers);
     }
 
@@ -193,6 +245,23 @@ export default {
 
     if (!env.POD_URL && !env.TOGETHER_API_KEY) {
       return jsonResponse({ error: "Service not configured" }, 500, headers);
+    }
+
+    // Weekly free-allowance gate (only active when Supabase metering is configured).
+    if (env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_URL) {
+      const userId = await authedUserId(env, request.headers.get("Authorization") || "");
+      if (!userId) return jsonResponse({ error: "Please sign in to use the calorie tracker." }, 401, headers);
+      const week = weekStartIso(new Date());
+      const limit = Math.max(0, Number(env.CALORIE_WEEKLY_LIMIT) || DEFAULT_WEEKLY_LIMIT);
+      const used = await readUsage(env, userId, CALORIE_METRIC, week);
+      if (used >= limit) {
+        return jsonResponse(
+          { error: "Weekly limit reached — upgrade or try again next week.", usage: { metric: CALORIE_METRIC, used, limit, reset: week } },
+          429,
+          headers
+        );
+      }
+      await incrementUsage(env, userId, CALORIE_METRIC, week, 1);
     }
 
     try {
