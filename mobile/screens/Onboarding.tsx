@@ -3,7 +3,11 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
 import { supabase } from "../lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Props = { onAuthenticated: () => void };
 
@@ -46,8 +50,27 @@ export default function Onboarding({ onAuthenticated }: Props) {
   async function oauth(provider: "google" | "apple") {
     if (!agree) { setMessage("Please agree to the Terms and Privacy Policy."); return; }
     setLoading(provider); setMessage("");
-    const { error } = await supabase.auth.signInWithOAuth({ provider });
-    if (error) setMessage(error.message);
+    try {
+      const redirectTo = AuthSession.makeRedirectUri();
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
+      if (error) { setMessage(error.message); setLoading(false); return; }
+      if (!data?.url) { setLoading(false); return; }
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type === "success") {
+        const code = new URL(result.url).searchParams.get("code");
+        if (code) {
+          const { error: ex } = await supabase.auth.exchangeCodeForSession(code);
+          if (ex) setMessage(ex.message);
+        }
+      } else if (result.type === "dismiss") {
+        setMessage("Sign-in was canceled.");
+      }
+    } catch (e: any) {
+      setMessage(e?.message || "Sign-in failed.");
+    }
     setLoading(false);
   }
 
