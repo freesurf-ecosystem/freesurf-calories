@@ -41,10 +41,20 @@ export default function Onboarding({ onAuthenticated }: Props) {
     } else {
       const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
       if (error) { setMessage(error.message); setLoading(false); return; }
+      const note = digest ? await subscribeDigest(email.trim()) : "";
       if (data.session) { onAuthenticated(); }
-      else { setMessage("Account created. Check your email to confirm, then sign in."); setMode("signin"); }
+      else { setMessage("Account created. Check your email to confirm, then sign in." + note); setMode("signin"); }
     }
     setLoading(false);
+  }
+
+  async function subscribeDigest(address: string) {
+    try {
+      const { error } = await supabase.functions.invoke("feedfree-create-signup", { body: { email: address, topics: [] } });
+      return error ? " Note: couldn't subscribe you to the FeedFree Digest — join at feedfree.tech." : "";
+    } catch {
+      return " Note: couldn't subscribe you to the FeedFree Digest — join at feedfree.tech.";
+    }
   }
 
   async function oauth(provider: "google" | "apple") {
@@ -60,10 +70,32 @@ export default function Onboarding({ onAuthenticated }: Props) {
       if (!data?.url) { setLoading(false); return; }
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
       if (result.type === "success") {
-        const code = new URL(result.url).searchParams.get("code");
-        if (code) {
-          const { error: ex } = await supabase.auth.exchangeCodeForSession(code);
-          if (ex) setMessage(ex.message);
+        const url = result.url;
+        const hash = url.includes("#") ? url.split("#")[1] ?? "" : "";
+        const hashParams = new URLSearchParams(hash);
+        const code = hashParams.get("code") ?? new URL(url).searchParams.get("code");
+        const accessToken = hashParams.get("access_token");
+        try {
+          if (accessToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: hashParams.get("refresh_token") ?? "",
+            });
+          } else if (code) {
+            const { error: ex } = await supabase.auth.exchangeCodeForSession(code);
+            if (ex) setMessage(ex.message);
+          } else {
+            setMessage("Sign-in did not return a session. Please try again.");
+          }
+        } catch (e: any) {
+          setMessage(e?.message || "Sign-in failed.");
+        }
+        if (digest) {
+          try {
+            const { data: sessData } = await supabase.auth.getSession();
+            const addr = sessData.session?.user?.email;
+            if (addr) await subscribeDigest(addr);
+          } catch { /* non-critical */ }
         }
       } else if (result.type === "dismiss") {
         setMessage("Sign-in was canceled.");
@@ -126,7 +158,7 @@ export default function Onboarding({ onAuthenticated }: Props) {
         {/* Feedfree Digest (optional) */}
         <Pressable onPress={() => setDigest(!digest)} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start", marginTop: 4 }}>
           <Text style={{ color: muted, fontWeight: "700", fontSize: 18, lineHeight: 20 }}>{digest ? "☑" : "☐"}</Text>
-          <Text style={{ color: muted, fontSize: 13, flex: 1 }}>
+          <Text style={{ color: text, fontSize: 14, flex: 1 }}>
             Subscribe to the <LinkText url={DIGEST_URL} label="FeedFree Digest" /> — Curated blog-length social posts covering AI, SEO, social media marketing and more - from X and LinkedIn
           </Text>
         </Pressable>
