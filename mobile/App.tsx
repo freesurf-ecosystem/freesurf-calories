@@ -9,6 +9,7 @@ import { supabase } from "./lib/supabase";
 import CalorieTrackerScreen from "./screens/CalorieTrackerScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AboutScreen from "./screens/AboutScreen";
+import Onboarding from "./screens/Onboarding";
 
 const darkTheme = {
   ...MD3DarkTheme,
@@ -97,6 +98,10 @@ export default function App() {
 
   if (session === null) {
     return <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0b1020" }}><ActivityIndicator color="#5b8cff" /></View>;
+  }
+
+  if (!session) {
+    return <Onboarding onAuthenticated={() => {}} />;
   }
 
   return (
