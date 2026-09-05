@@ -13,6 +13,7 @@ type Props = { onAuthenticated: () => void };
 
 const TERMS_URL = "https://freesurf.tools/terms";
 const PRIVACY_URL = "https://freesurf.tools/privacy";
+const AI_URL = "https://freesurf.tools/ai-processing";
 const DIGEST_URL = "https://feedfree.tech";
 
 export default function Onboarding({ onAuthenticated }: Props) {
@@ -151,7 +152,7 @@ export default function Onboarding({ onAuthenticated }: Props) {
         <Pressable onPress={() => setAgree(!agree)} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start", marginTop: 6 }}>
           <Text style={{ color: brand, fontWeight: "700", fontSize: 18, lineHeight: 20 }}>{agree ? "☑" : "☐"}</Text>
           <Text style={{ color: text, fontSize: 14, flex: 1 }} onPress={() => setAgree(!agree)}>
-            I agree to the <LinkText url={TERMS_URL} label="Terms" /> and <LinkText url={PRIVACY_URL} label="Privacy Policy" />
+            I agree to the <LinkText url={TERMS_URL} label="Terms" />, <LinkText url={PRIVACY_URL} label="Privacy Policy" />, and <LinkText url={AI_URL} label="AI Processing" />
           </Text>
         </Pressable>
 
