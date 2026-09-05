@@ -58,7 +58,7 @@ async function analyzeWithTogether(
   foodDescription: string,
   env: Env
 ): Promise<{ items: any[] }> {
-  const model = env.TOGETHER_MODEL || "Qwen/Qwen2.5-VL-7B-Instruct";
+  const model = env.TOGETHER_MODEL || "zai-org/glm-5.3-flash";
   const content: any[] = [];
   if (imageBase64) {
     content.push({ type: "image_url", image_url: { url: `data:${sniffImageMime(imageBase64)};base64,${imageBase64}` } });
