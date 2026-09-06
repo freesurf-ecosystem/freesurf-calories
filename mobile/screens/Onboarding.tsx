@@ -65,7 +65,11 @@ export default function Onboarding({ onAuthenticated }: Props) {
       const redirectTo = AuthSession.makeRedirectUri();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo, skipBrowserRedirect: true },
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+          ...(provider === "google" ? { scopes: "openid email" } : {}),
+        },
       });
       if (error) { setMessage(error.message); setLoading(false); return; }
       if (!data?.url) { setLoading(false); return; }
