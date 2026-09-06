@@ -9,6 +9,7 @@ export interface Env {
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  USAGE_METERING?: string;
   CALORIE_WEEKLY_LIMIT?: string;
 }
 
@@ -226,7 +227,7 @@ export default {
       }
       // Usage meter — how much of the weekly allowance is left.
       if (url.pathname === "/api/usage") {
-        if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.SUPABASE_URL) {
+        if (env.USAGE_METERING !== "on" || !env.SUPABASE_SERVICE_ROLE_KEY || !env.SUPABASE_URL) {
           return jsonResponse({ error: "Usage metering not configured" }, 500, headers);
         }
         const userId = await authedUserId(env, request.headers.get("Authorization") || "");
@@ -248,7 +249,7 @@ export default {
     }
 
     // Weekly free-allowance gate (only active when Supabase metering is configured).
-    if (env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_URL) {
+    if (env.USAGE_METERING === "on" && env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_URL) {
       const userId = await authedUserId(env, request.headers.get("Authorization") || "");
       if (!userId) return jsonResponse({ error: "Please sign in to use the calorie tracker." }, 401, headers);
       const week = weekStartIso(new Date());
