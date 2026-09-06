@@ -1,5 +1,5 @@
 /**
- * FreeSurf Calorie Tracker — Cloudflare Worker
+ * Free Surf Calorie Tracker — Cloudflare Worker
  * Proxies food photos → consolidated AI pod (vision) for identification + macro estimation.
  */
 export interface Env {
@@ -136,7 +136,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost:8081",
-  "https://freesurf.tools",
+  "https://Free Surf.tools",
 ];
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -166,7 +166,7 @@ const LANDING_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>AI Calorie Tracker · FreeSurf</title>
+<title>AI Calorie Tracker · Free Surf</title>
 <meta name="description" content="Photograph your meal and get an instant estimate of calories, protein, carbs, and fat."/>
 <style>
   :root { color-scheme: light dark; --bg:#ffffff; --text:#1d1b18; --muted:#8a8178; --brand:#1d1b18; --border:#e6e4df; }
@@ -188,16 +188,16 @@ const LANDING_HTML = `<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <a class="logo" href="https://freesurf.tools">FreeSurf</a>
+  <a class="logo" href="https://Free Surf.tools">Free Surf</a>
   <h1>AI Calorie Tracker</h1>
   <p class="lede">Snap a photo of your meal and get an instant estimate of calories, protein, carbs, and fat — no manual logging.</p>
   <div class="phone">Phone screenshots coming soon</div>
   <div class="stores">
-    <a class="store play" href="https://play.google.com/store/apps/details?id=tools.freesurf.calorietracker" target="_blank" rel="noopener">Get it on Google Play</a>
+    <a class="store play" href="https://play.google.com/store/apps/details?id=tools.Free Surf.calorietracker" target="_blank" rel="noopener">Get it on Google Play</a>
     <span class="store soon">App Store · Upcoming</span>
   </div>
   <footer>
-    <span>&copy; <span id="year"></span> FreeSurf · Free tools, no bullshit.</span>
+    <span>&copy; <span id="year"></span> Free Surf · Free tools, no bullshit.</span>
     <a href="https://feedfree.tech" target="_blank" rel="noopener">Feedfree Digest</a>
   </footer>
 </div>
@@ -220,7 +220,7 @@ export default {
       if (url.pathname === "/sitemap.xml") {
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://calories.freesurf.tools/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://calories.Free Surf.tools/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
 </urlset>`;
         return new Response(xml, { status: 200, headers: { "Content-Type": "application/xml" } });
       }
