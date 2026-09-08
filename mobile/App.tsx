@@ -9,6 +9,8 @@ import { supabase } from "./lib/supabase";
 import CalorieTrackerScreen from "./screens/CalorieTrackerScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AboutScreen from "./screens/AboutScreen";
+import LanguageChooser from "./screens/LanguageChooser";
+import { useAppLanguage } from "./i18n";
 
 const darkTheme = {
   ...MD3DarkTheme,
@@ -59,6 +61,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const { loaded: langLoaded, chosen: langChosen, setLanguage } = useAppLanguage();
   const [session, setSession] = useState<boolean | null>(null);
   const [isDark, setIsDark] = useState(true);
 
@@ -97,6 +100,18 @@ export default function App() {
 
   if (session === null) {
     return <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0b1020" }}><ActivityIndicator color="#5b8cff" /></View>;
+  }
+
+  if (!langLoaded) {
+    return <View style={{ flex: 1, backgroundColor: isDark ? "#000" : "#fff" }} />;
+  }
+  if (!langChosen) {
+    return (
+      <PaperProvider theme={isDark ? darkTheme : lightTheme}>
+        <StatusBar style="light" />
+        <LanguageChooser onSelect={setLanguage} />
+      </PaperProvider>
+    );
   }
 
   return (

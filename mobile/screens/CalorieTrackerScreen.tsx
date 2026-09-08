@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
 import FloatingHamburger from "../components/FloatingHamburger";
 import { WORKER_URL } from "../lib/config";
+import { translations, useAppLanguage } from "../i18n";
 
 const LOG_KEY = "freesurf-calorie-log";
 const GOAL_KEY = "freesurf-calorie-goal";
@@ -30,6 +31,8 @@ function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDat
 
 export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onToggleTheme, navigation }: Props) {
   const theme = useTheme();
+  const { lang } = useAppLanguage();
+  const T = translations[lang];
   const [log, setLog] = useState<MealEntry[]>([]);
   const [goal, setGoal] = useState(2000);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -225,11 +228,11 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       <Modal visible={showGoalDialog} transparent animationType="fade" onRequestClose={() => setShowGoalDialog(false)}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 24 }}>
           <Surface style={{ borderRadius: 16, padding: 24 }}>
-            <Text variant="titleMedium" style={{ fontWeight: "700", marginBottom: 16 }}>Daily calorie goal</Text>
+            <Text variant="titleMedium" style={{ fontWeight: "700", marginBottom: 16 }}>{T.dailyGoal}</Text>
             <TextInput mode="outlined" label="Calories" value={goalInput} onChangeText={setGoalInput} keyboardType="numeric" />
             <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 20 }}>
-              <Button onPress={() => setShowGoalDialog(false)}>Cancel</Button>
-              <Button mode="contained" onPress={() => { const g = Number(goalInput) || 2000; saveGoal(g); setShowGoalDialog(false); }}>Save</Button>
+              <Button onPress={() => setShowGoalDialog(false)}>{T.cancel}</Button>
+              <Button mode="contained" onPress={() => { const g = Number(goalInput) || 2000; saveGoal(g); setShowGoalDialog(false); }}>{T.save}</Button>
             </View>
           </Surface>
         </View>
@@ -239,9 +242,9 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       <Modal visible={!!editEntry} animationType="slide">
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 12, paddingTop: 54, backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.outline }}>
-            <Button textColor={theme.colors.error} onPress={() => setEditEntry(null)}>Cancel</Button>
-            <Text variant="titleMedium" style={{ fontWeight: "700" }}>Confirm Meal</Text>
-            <Button onPress={saveEdit}>Save</Button>
+            <Button textColor={theme.colors.error} onPress={() => setEditEntry(null)}>{T.cancel}</Button>
+            <Text variant="titleMedium" style={{ fontWeight: "700" }}>{T.confirmMeal}</Text>
+            <Button onPress={saveEdit}>{T.save}</Button>
           </View>
           <ScrollView style={{ flex: 1, padding: 16 }}>
             {editEntry?.imageUri && <Image source={{ uri: editEntry.imageUri }} style={{ width: "100%", height: 200, borderRadius: 14, marginBottom: 16 }} resizeMode="cover" />}
@@ -249,7 +252,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
               <Card key={item.id} style={{ marginBottom: 10 }} mode="contained">
                 <Card.Content style={{ gap: 10 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <TextInput mode="outlined" style={{ flex: 1 }} value={item.name} onChangeText={(v) => updItem(item.id, "name", v)} placeholder="Food name" dense />
+                    <TextInput mode="outlined" style={{ flex: 1 }} value={item.name} onChangeText={(v) => updItem(item.id, "name", v)} placeholder={T.foodName} dense />
                     <TextInput mode="outlined" style={{ width: 50, fontSize: 13 }} value={item.qty} onChangeText={(v) => updItem(item.id, "qty", v)} placeholder="1" dense keyboardType="numeric" />
                   <UnitPicker item={item} onChange={(v) => updItem(item.id, "unit", v)} theme={theme} />
                     <IconButton icon="refresh" size={16} onPress={() => reEstimateItem(item)} />
@@ -274,13 +277,13 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "85%" }}>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
-            <Text variant="titleLarge" style={{ fontWeight: "700", marginBottom: 16 }}>Quick Add</Text>
+            <Text variant="titleLarge" style={{ fontWeight: "700", marginBottom: 16 }}>{T.quickAdd}</Text>
             <TextInput mode="outlined" label="Food name" value={manualItem.name} onChangeText={(v) => setManualItem({ ...manualItem, name: v })} style={{ marginBottom: 12 }} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <TextInput mode="outlined" label="Amount" value={manualItem.qty} onChangeText={(v) => setManualItem({ ...manualItem, qty: v })} keyboardType="numeric" dense style={{ width: 80, fontSize: 13 }} />
               <UnitPicker item={{ unit: manualItem.unit }} onChange={(v) => setManualItem({ ...manualItem, unit: v })} theme={theme} />
             </View>
-            <Button mode="outlined" loading={isEstimating} onPress={estimateFood} style={{ marginBottom: 16 }} icon="magnify">Look up calories</Button>
+            <Button mode="outlined" loading={isEstimating} onPress={estimateFood} style={{ marginBottom: 16 }} icon="magnify">{T.lookUpCalories}</Button>
             <View style={{ flexDirection: "row", gap: 6 }}>
               <MI l="Cal" v={Number(manualItem.calories) || 0} onChange={(v) => setManualItem({ ...manualItem, calories: v })} theme={theme} />
               <MI l="Prot" v={Number(manualItem.protein) || 0} onChange={(v) => setManualItem({ ...manualItem, protein: v })} theme={theme} />
@@ -288,8 +291,8 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
               <MI l="Fat" v={Number(manualItem.fat) || 0} onChange={(v) => setManualItem({ ...manualItem, fat: v })} theme={theme} />
             </View>
             <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
-              <Button mode="outlined" style={{ flex: 1 }} onPress={() => { setShowAddManual(false); setManualItem({ name: "", qty: "1", unit: "", calories: "", protein: "", carbs: "", fat: "" }); }}>Cancel</Button>
-              <Button mode="contained" style={{ flex: 1 }} onPress={addManual}>Add</Button>
+              <Button mode="outlined" style={{ flex: 1 }} onPress={() => { setShowAddManual(false); setManualItem({ name: "", qty: "1", unit: "", calories: "", protein: "", carbs: "", fat: "" }); }}>{T.cancel}</Button>
+              <Button mode="contained" style={{ flex: 1 }} onPress={addManual}>{T.add}</Button>
             </View>
             </ScrollView>
           </View>
@@ -313,9 +316,9 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
             <IconButton icon="calendar" size={22} onPress={() => setShowDatePicker(true)} />
             <FloatingHamburger inline colors={hbColors} footer={themeToggleFooter}
               menuItems={[
-                { label: "Support", onPress: () => Linking.openURL("https://freesurf.tools/support") },
-                { label: "Privacy", onPress: () => Linking.openURL("https://freesurf.tools/privacy") },
-                { label: "Terms", onPress: () => Linking.openURL("https://freesurf.tools/terms") },
+                { label: T.menuSupport, onPress: () => Linking.openURL("https://freesurf.tools/support") },
+                { label: T.menuPrivacy, onPress: () => Linking.openURL("https://freesurf.tools/privacy") },
+                { label: T.menuTerms, onPress: () => Linking.openURL("https://freesurf.tools/terms") },
               ]}
             />
           </View>
@@ -374,7 +377,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
         {todayMeals.length === 0 ? (
           <View style={{ alignItems: "center", paddingTop: 40 }}>
             <Utensils size={48} color={theme.colors.onSurfaceVariant} />
-            <Text variant="titleMedium" style={{ fontWeight: "600", marginTop: 12 }}>No meals logged</Text>
+            <Text variant="titleMedium" style={{ fontWeight: "600", marginTop: 12 }}>{T.noMeals}</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
               {isToday ? "Tap the camera to log your first meal" : "No data for this day"}
             </Text>
@@ -413,7 +416,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       </View>
       {isAnalyzing && (
         <View style={{ position: "absolute", right: 16, bottom: 72, backgroundColor: theme.colors.surface, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: theme.colors.outline, elevation: 2 }}>
-          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Processing photo...</Text>
+          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>{T.processingPhoto}</Text>
         </View>
       )}
     </View>
