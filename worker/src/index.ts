@@ -10,18 +10,17 @@ export interface Env {
   SUPABASE_ANON_KEY?: string;
   SUPABASE_SECRET_KEY?: string;
   USAGE_METERING?: string;
-  CALORIE_WEEKLY_LIMIT?: string;
+  CALORIE_MONTHLY_LIMIT?: string;
 }
 
 const CALORIE_METRIC = "calorie_requests";
-const DEFAULT_WEEKLY_LIMIT = 10;
+const DEFAULT_MONTHLY_LIMIT = 30;
 
 function srHeaders(env: Env): Record<string, string> {
   return { apikey: env.SUPABASE_SECRET_KEY || "", Authorization: `Bearer ${env.SUPABASE_SECRET_KEY || ""}` };
 }
-function weekStartIso(now: Date): string {
-  const day = (now.getUTCDay() + 6) % 7;
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day)).toISOString().slice(0, 10);
+function monthStartIso(now: Date): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
 }
 async function authedUserId(env: Env, authHeader: string): Promise<string | null> {
   if (!authHeader.startsWith("Bearer ") || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return null;
@@ -31,18 +30,24 @@ async function authedUserId(env: Env, authHeader: string): Promise<string | null
     return ((await res.json()) as { id?: string })?.id || null;
   } catch { return null; }
 }
-async function readUsage(env: Env, userId: string, metric: string, week: string): Promise<number> {
+async function resolveUserId(env: Env, request: Request): Promise<string | null> {
+  const authed = await authedUserId(env, request.headers.get("Authorization") || "");
+  if (authed) return authed;
+  const deviceId = request.headers.get("X-Device-Id")?.trim();
+  return deviceId ? `anon:${deviceId}` : null;
+}
+async function readUsage(env: Env, userId: string, metric: string, period: string): Promise<number> {
   try {
-    const q = new URLSearchParams({ user_id: `eq.${userId}`, metric: `eq.${metric}`, week_start: `eq.${week}`, select: "count" });
+    const q = new URLSearchParams({ user_id: `eq.${userId}`, metric: `eq.${metric}`, period_start: `eq.${period}`, select: "count" });
     const res = await fetch(`${env.SUPABASE_URL}/rest/v1/usage?${q.toString()}`, { headers: srHeaders(env) });
     if (!res.ok) return 0;
     return Number(((await res.json()) as any[])?.[0]?.count) || 0;
   } catch { return 0; }
 }
-async function incrementUsage(env: Env, userId: string, metric: string, week: string, delta: number): Promise<number> {
+async function incrementUsage(env: Env, userId: string, metric: string, period: string, delta: number): Promise<number> {
   const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/meter_usage`, {
     method: "POST", headers: { ...srHeaders(env), "Content-Type": "application/json" },
-    body: JSON.stringify({ p_user_id: userId, p_metric: metric, p_week: week, p_delta: delta }),
+    body: JSON.stringify({ p_user_id: userId, p_metric: metric, p_period: period, p_delta: delta }),
   });
   if (!res.ok) return 0;
   const n = Number(await res.text());
@@ -225,17 +230,17 @@ export default {
 </urlset>`;
         return new Response(xml, { status: 200, headers: { "Content-Type": "application/xml" } });
       }
-      // Usage meter — how much of the weekly allowance is left.
+      // Usage meter — how much of the monthly allowance is left.
       if (url.pathname === "/api/usage") {
         if (env.USAGE_METERING !== "on" || !env.SUPABASE_SECRET_KEY || !env.SUPABASE_URL) {
           return jsonResponse({ error: "Usage metering not configured" }, 500, headers);
         }
-        const userId = await authedUserId(env, request.headers.get("Authorization") || "");
-        if (!userId) return jsonResponse({ error: "Unauthorized" }, 401, headers);
-        const week = weekStartIso(new Date());
-        const limit = Math.max(0, Number(env.CALORIE_WEEKLY_LIMIT) || DEFAULT_WEEKLY_LIMIT);
-        const used = await readUsage(env, userId, CALORIE_METRIC, week);
-        return jsonResponse({ usage: { metric: CALORIE_METRIC, used, limit, reset: week } }, 200, headers);
+        const userId = await resolveUserId(env, request);
+        if (!userId) return jsonResponse({ error: "Missing device id" }, 401, headers);
+        const period = monthStartIso(new Date());
+        const limit = Math.max(0, Number(env.CALORIE_MONTHLY_LIMIT) || DEFAULT_MONTHLY_LIMIT);
+        const used = await readUsage(env, userId, CALORIE_METRIC, period);
+        return jsonResponse({ usage: { metric: CALORIE_METRIC, used, limit, reset: period } }, 200, headers);
       }
       return htmlResponse(LANDING_HTML, headers);
     }
@@ -248,21 +253,21 @@ export default {
       return jsonResponse({ error: "Service not configured" }, 500, headers);
     }
 
-    // Weekly free-allowance gate (only active when Supabase metering is configured).
+    // Monthly free-allowance gate (only active when Supabase metering is configured).
     if (env.USAGE_METERING === "on" && env.SUPABASE_SECRET_KEY && env.SUPABASE_URL) {
-      const userId = await authedUserId(env, request.headers.get("Authorization") || "");
-      if (!userId) return jsonResponse({ error: "Please sign in to use the calorie tracker." }, 401, headers);
-      const week = weekStartIso(new Date());
-      const limit = Math.max(0, Number(env.CALORIE_WEEKLY_LIMIT) || DEFAULT_WEEKLY_LIMIT);
-      const used = await readUsage(env, userId, CALORIE_METRIC, week);
+      const userId = await resolveUserId(env, request);
+      if (!userId) return jsonResponse({ error: "Missing device id" }, 401, headers);
+      const period = monthStartIso(new Date());
+      const limit = Math.max(0, Number(env.CALORIE_MONTHLY_LIMIT) || DEFAULT_MONTHLY_LIMIT);
+      const used = await readUsage(env, userId, CALORIE_METRIC, period);
       if (used >= limit) {
         return jsonResponse(
-          { error: "Weekly limit reached — upgrade or try again next week.", usage: { metric: CALORIE_METRIC, used, limit, reset: week } },
+          { error: "Monthly limit reached — try again next month.", usage: { metric: CALORIE_METRIC, used, limit, reset: period } },
           429,
           headers
         );
       }
-      await incrementUsage(env, userId, CALORIE_METRIC, week, 1);
+      await incrementUsage(env, userId, CALORIE_METRIC, period, 1);
     }
 
     try {

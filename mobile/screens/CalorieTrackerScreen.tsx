@@ -11,6 +11,8 @@ import * as FileSystem from "expo-file-system/legacy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
 import FloatingHamburger from "../components/FloatingHamburger";
+import UsageMeter from "../components/UsageMeter";
+import { getDeviceId } from "../lib/device";
 import { WORKER_URL } from "../lib/config";
 import { translations, useAppLanguage } from "../i18n";
 
@@ -110,7 +112,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       console.log("[Analyze] base64 length:", b64?.length ?? 0);
       const body = JSON.stringify({ image_base64: b64 });
       console.log("[Analyze] sending to:", `${WORKER_URL}/api/analyze`, "body size:", body.length);
-      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body });
       console.log("[Analyze] response status:", res.status);
       const text = await res.text();
       console.log("[Analyze] response text (first 500):", text.slice(0, 500));
@@ -161,7 +163,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
     const desc = [item.qty, item.unit, item.name].filter(Boolean).join(" ");
     if (!desc.trim()) return;
     try {
-      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ food_description: desc }) });
+      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body: JSON.stringify({ food_description: desc }) });
       const data = await res.json();
       if (data.error || !data.items?.[0]) { Alert.alert("Error", "Could not estimate nutrition."); return; }
       const est = data.items[0];
@@ -178,7 +180,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
     if (!desc.trim()) return;
     setIsEstimating(true);
     try {
-      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ food_description: desc }) });
+      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body: JSON.stringify({ food_description: desc }) });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       const item = (data.items || [])[0];
@@ -210,8 +212,11 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
   function del(id: string) { saveLog(log.filter((e) => e.id !== id)); }
 
   const themeToggleFooter = onToggleTheme ? (
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-      <Switch value={!isDark} onValueChange={onToggleTheme} trackColor={{ true: isDark ? "#ffffff" : "#111827", false: "#555" }} />
+    <View style={{ flexDirection: "column", gap: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+        <Switch value={!isDark} onValueChange={onToggleTheme} trackColor={{ true: isDark ? "#ffffff" : "#111827", false: "#555" }} />
+      </View>
+      <UsageMeter colors={{ text: theme.colors.onSurface, dim: theme.colors.onSurfaceVariant }} />
     </View>
   ) : undefined;
 
