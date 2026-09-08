@@ -1,5 +1,5 @@
 /**
- * Free Surf Calorie Tracker — Cloudflare Worker
+ * FreeSurf Calorie Tracker — Cloudflare Worker
  * Proxies food photos → consolidated AI pod (vision) for identification + macro estimation.
  */
 export interface Env {
@@ -167,7 +167,7 @@ const LANDING_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>AI Calorie Tracker · Free Surf</title>
+<title>AI Calorie Tracker · FreeSurf</title>
 <meta name="description" content="Photograph your meal and get an instant estimate of calories, protein, carbs, and fat."/>
 <style>
   :root { color-scheme: light dark; --bg:#ffffff; --text:#1d1b18; --muted:#8a8178; --brand:#1d1b18; --border:#e6e4df; }
@@ -189,16 +189,16 @@ const LANDING_HTML = `<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <a class="logo" href="https://freesurf.tools">Free Surf</a>
+  <a class="logo" href="https://freesurf.tools">FreeSurf</a>
   <h1>AI Calorie Tracker</h1>
   <p class="lede">Snap a photo of your meal and get an instant estimate of calories, protein, carbs, and fat — no manual logging.</p>
   <div class="phone">Phone screenshots coming soon</div>
   <div class="stores">
-    <a class="store play" href="https://play.google.com/store/apps/details?id=tools.Free Surf.calorietracker" target="_blank" rel="noopener">Get it on Google Play</a>
+    <a class="store play" href="https://play.google.com/store/apps/details?id=tools.freesurf.calorietracker" target="_blank" rel="noopener">Get it on Google Play</a>
     <span class="store soon">App Store · Upcoming</span>
   </div>
   <footer>
-    <span>&copy; <span id="year"></span> Free Surf · Free tools, no bullshit.</span>
+    <span>&copy; <span id="year"></span> FreeSurf · Free tools, no bullshit.</span>
     <a href="https://feedfree.tech" target="_blank" rel="noopener">Feedfree Digest</a>
   </footer>
 </div>

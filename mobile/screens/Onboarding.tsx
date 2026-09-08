@@ -121,7 +121,7 @@ export default function Onboarding({ onAuthenticated }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={{ padding: 28, paddingTop: 90, gap: 12 }} keyboardShouldPersistTaps="handled">
-        <Text style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: brand, marginBottom: 4 }}>Free Surf</Text>
+        <Text style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: brand, marginBottom: 4 }}>FreeSurf</Text>
         <Text style={{ fontSize: 30, fontWeight: "700", color: text, marginBottom: 2 }}>Create account</Text>
         <Text style={{ color: muted, marginBottom: 8 }}>Create a free account to get started.</Text>
 
