@@ -313,7 +313,6 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
             <IconButton icon="calendar" size={22} onPress={() => setShowDatePicker(true)} />
             <FloatingHamburger inline colors={hbColors} footer={themeToggleFooter}
               menuItems={[
-                { label: "About Us", onPress: () => navigation?.navigate("About") },
                 { label: "Support", onPress: () => Linking.openURL("https://freesurf.tools/support") },
                 { label: "Privacy", onPress: () => Linking.openURL("https://freesurf.tools/privacy") },
                 { label: "Terms", onPress: () => Linking.openURL("https://freesurf.tools/terms") },
