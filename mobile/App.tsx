@@ -9,6 +9,7 @@ import { supabase } from "./lib/supabase";
 import CalorieTrackerScreen from "./screens/CalorieTrackerScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AboutScreen from "./screens/AboutScreen";
+import SubscriptionScreen from "./screens/SubscriptionScreen";
 import LanguageChooser from "./screens/LanguageChooser";
 import { useAppLanguage } from "./i18n";
 
@@ -56,6 +57,7 @@ export type RootStackParamList = {
   CalorieTracker: undefined;
   Auth: undefined;
   About: undefined;
+  Subscription: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -132,6 +134,11 @@ export default function App() {
         <Stack.Screen name="Auth">
           {(props) => (
             <AuthScreen onAuthenticated={() => { setSession(true); props.navigation.goBack(); }} onBack={() => props.navigation.goBack()} />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Subscription">
+          {(props) => (
+            <SubscriptionScreen onBack={() => props.navigation.goBack()} />
           )}
         </Stack.Screen>
       </Stack.Navigator>

@@ -21,6 +21,14 @@ export const translations: Record<Lang, Strings> = {
     menuSupport: "Support",
     menuPrivacy: "Privacy",
     menuTerms: "Terms",
+    goPro: "Go Pro", proBadge: "PRO", proTitle: "Calorie Tracker Pro",
+    proSubtitle: "Unlimited AI food logging for power users.",
+    proPrice: "$20", proPerMonth: "/ month",
+    featureUnlimited: "Unlimited AI food logging",
+    featureNoAds: "No ads",
+    subscribeCta: "Subscribe", restoreCta: "Restore Purchase",
+    cancelAnytime: "Cancel anytime in Google Play or the App Store.",
+    proNote: "Subscriptions keep the free tier free for everyone.",
   },
   es: {
     dailyGoal: "Objetivo diario de calorías",
@@ -131,6 +139,11 @@ export function deviceLang(): Lang {
   } catch {
     return DEFAULT_LANG;
   }
+}
+
+export function translationsFor(lang: Lang): Strings {
+  const en = translations[DEFAULT_LANG] ?? {};
+  return { ...en, ...(translations[lang] ?? {}) };
 }
 
 export function useAppLanguage(): {

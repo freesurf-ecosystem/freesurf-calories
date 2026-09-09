@@ -14,7 +14,7 @@ import FloatingHamburger from "../components/FloatingHamburger";
 import UsageMeter from "../components/UsageMeter";
 import { getDeviceId } from "../lib/device";
 import { WORKER_URL } from "../lib/config";
-import { translations, useAppLanguage } from "../i18n";
+import { translationsFor, useAppLanguage } from "../i18n";
 
 const LOG_KEY = "freesurf-calorie-log";
 const GOAL_KEY = "freesurf-calorie-goal";
@@ -34,7 +34,7 @@ function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDat
 export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onToggleTheme, navigation }: Props) {
   const theme = useTheme();
   const { lang } = useAppLanguage();
-  const T = translations[lang];
+  const T = translationsFor(lang);
   const [log, setLog] = useState<MealEntry[]>([]);
   const [goal, setGoal] = useState(2000);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -321,6 +321,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
             <IconButton icon="calendar" size={22} onPress={() => setShowDatePicker(true)} />
             <FloatingHamburger inline colors={hbColors} footer={themeToggleFooter}
               menuItems={[
+                { label: T.goPro, onPress: () => navigation?.navigate("Subscription") },
                 { label: T.menuSupport, onPress: () => Linking.openURL("https://freesurf.tools/support") },
                 { label: T.menuPrivacy, onPress: () => Linking.openURL("https://freesurf.tools/privacy") },
                 { label: T.menuTerms, onPress: () => Linking.openURL("https://freesurf.tools/terms") },
