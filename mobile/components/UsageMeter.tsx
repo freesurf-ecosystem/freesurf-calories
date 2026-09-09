@@ -31,16 +31,22 @@ export default function UsageMeter({ colors }: Props) {
   }, []);
 
   if (state !== "ok") return null;
+  const pct = limit > 0 ? Math.min(1, used / limit) * 100 : 0;
   return (
     <View style={styles.wrap}>
       <Text style={[styles.label, { color: colors.text }]}>Free analyses</Text>
       <Text style={[styles.value, { color: colors.dim }]}>{used} / {limit} this month</Text>
+      <View style={[styles.track, { backgroundColor: colors.dim + "33" }]}>
+        <View style={[styles.fill, { width: `${pct}%`, backgroundColor: colors.text }]} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 2 },
+  wrap: { gap: 4 },
   label: { fontSize: 15 },
   value: { fontSize: 13 },
+  track: { height: 6, borderRadius: 3, overflow: "hidden", marginTop: 2 },
+  fill: { height: "100%", borderRadius: 3 },
 });
