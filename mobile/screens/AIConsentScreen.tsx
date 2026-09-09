@@ -7,7 +7,7 @@ type Props = { onAgree: () => void };
 
 const TERMS_URL = "https://freesurf.tools/terms";
 const PRIVACY_URL = "https://freesurf.tools/privacy";
-const AI_URL = "https://freesurf.tools/privacy"; // dedicated AI & data processing doc link
+const AI_URL = PRIVACY_URL; // AI data processing is documented in the Privacy Policy
 
 const AI_COPY =
   "Calorie Tracker uses AI to estimate nutrition. When you photograph a meal, we send the photo to the Together AI serverless network, where open-source models analyze it and return calorie and macro estimates to you.";
