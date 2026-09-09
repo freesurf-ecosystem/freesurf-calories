@@ -3,4 +3,4 @@ export const WORKER_URL = `https://calories.${ROOT_DOMAIN}`;
 
 // RevenueCat Google Play public SDK key for THIS app (Calorie Tracker). Replace the
 // placeholder with the key from RevenueCat's Calorie Tracker (Google Play) app entry.
-export const REVENUECAT_ANDROID_KEY = "GOOG_CALORIE_PUBLIC_SDK_KEY_HERE";
+export const REVENUECAT_ANDROID_KEY = "goog_beBrFBRPOhXNYiqXTXkigaeRVCU";
