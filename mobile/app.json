@@ -2,7 +2,7 @@
   "expo": {
     "name": "Calories",
     "slug": "freesurf-calorie-tracker",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +15,7 @@
     ],
     "android": {
       "package": "tools.freesurf.calorietracker",
-      "versionCode": 8
+      "versionCode": 9
     },
     "ios": {
       "bundleIdentifier": "tools.freesurf.calorietracker",
