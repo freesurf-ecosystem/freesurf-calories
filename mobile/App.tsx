@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, AppState, Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { PaperProvider, MD3DarkTheme, MD3LightTheme } from "react-native-paper";
 import { requestTrackingPermissionsAsync, getTrackingPermissionsAsync } from "expo-tracking-transparency";
 import { supabase } from "./lib/supabase";
@@ -13,7 +14,10 @@ import CalorieTrackerScreen from "./screens/CalorieTrackerScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AboutScreen from "./screens/AboutScreen";
 import SubscriptionScreen from "./screens/SubscriptionScreen";
+import AIConsentScreen from "./screens/AIConsentScreen";
 import LanguageChooser from "./screens/LanguageChooser";
+
+const AI_CONSENT_KEY = "freesurf-calorie-ai-consent-v1";
 import { useAppLanguage } from "./i18n";
 
 const darkTheme = {
@@ -69,6 +73,16 @@ export default function App() {
   const { loaded: langLoaded, chosen: langChosen, setLanguage } = useAppLanguage();
   const [session, setSession] = useState<boolean | null>(null);
   const [isDark, setIsDark] = useState(true);
+  const [aiConsent, setAiConsent] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(AI_CONSENT_KEY).then((v) => setAiConsent(v === "true")).catch(() => setAiConsent(false));
+  }, []);
+
+  const agreeAiConsent = async () => {
+    setAiConsent(true);
+    AsyncStorage.setItem(AI_CONSENT_KEY, "true").catch(() => {});
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(Boolean(data.session)));
@@ -129,6 +143,17 @@ export default function App() {
       <PaperProvider theme={isDark ? darkTheme : lightTheme}>
         <StatusBar style="light" />
         <LanguageChooser onSelect={setLanguage} />
+      </PaperProvider>
+    );
+  }
+  if (aiConsent !== true) {
+    if (aiConsent === null) {
+      return <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "#000" : "#fff" }}><ActivityIndicator color="#5b8cff" /></View>;
+    }
+    return (
+      <PaperProvider theme={isDark ? darkTheme : lightTheme}>
+        <StatusBar style="light" />
+        <AIConsentScreen onAgree={agreeAiConsent} />
       </PaperProvider>
     );
   }
