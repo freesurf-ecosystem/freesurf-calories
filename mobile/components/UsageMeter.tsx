@@ -34,7 +34,7 @@ export default function UsageMeter({ colors }: Props) {
   const pct = limit > 0 ? Math.min(1, used / limit) * 100 : 0;
   return (
     <View style={styles.wrap}>
-      <Text style={[styles.label, { color: colors.text }]}>Free analyses</Text>
+      <Text style={[styles.label, { color: colors.text }]}>Free credits</Text>
       <Text style={[styles.value, { color: colors.dim }]}>{used} / {limit} this month</Text>
       <View style={[styles.track, { backgroundColor: colors.dim + "33" }]}>
         <View style={[styles.fill, { width: `${pct}%`, backgroundColor: colors.text }]} />
