@@ -2,7 +2,7 @@
   "expo": {
     "name": "Calories",
     "slug": "freesurf-calorie-tracker",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,14 +15,13 @@
     ],
     "android": {
       "package": "tools.freesurf.calorietracker",
-      "versionCode": 9
+      "versionCode": 10
     },
     "ios": {
       "bundleIdentifier": "tools.freesurf.calorietracker",
       "infoPlist": {
         "NSCameraUsageDescription": "FreeSurf Calorie Tracker uses your camera to photograph your meal so it can identify the foods and estimate their nutrition (calories, protein, carbs, and fat). Photos are processed and are not stored.",
         "NSPhotoLibraryUsageDescription": "FreeSurf Calorie Tracker uses your photo library so you can choose an existing meal photo to analyze its nutrition. Photos are processed and are not stored.",
-        "NSUserTrackingUsageDescription": "Your device identifier is used to serve personalized ads and keep FreeSurf free.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "privacyManifests": {
@@ -62,7 +61,6 @@
     "owner": "freesurf",
     "plugins": [
       "expo-image-picker",
-      "expo-tracking-transparency",
       [
         "expo-build-properties",
         {
