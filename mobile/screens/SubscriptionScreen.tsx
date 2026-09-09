@@ -1,14 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, ScrollView, Alert } from "react-native";
 import { Text, Button, Surface, useTheme, IconButton } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Crown, Check } from "lucide-react-native";
+import Purchases, { type PurchasesError, type PurchasesPackage } from "react-native-purchases";
 import { translationsFor, useAppLanguage } from "../i18n";
 
 type Props = { onBack: () => void };
-
-// Until RevenueCat is wired in, show the planned monthly price.
-const MONTHLY_PRICE = "$20";
 
 export default function SubscriptionScreen({ onBack }: Props) {
   const theme = useTheme();
@@ -16,25 +14,54 @@ export default function SubscriptionScreen({ onBack }: Props) {
   const { lang } = useAppLanguage();
   const T = translationsFor(lang);
   const [busy, setBusy] = useState(false);
+  const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
+  const [price, setPrice] = useState<string | null>(null);
 
   const features = [T.featureUnlimited, T.featureNoAds];
 
-  const onSubscribe = () => {
-    setBusy(true);
-    // TODO(RevenueCat): call Purchases.purchasePackage(...) on the fetched offering.
-    setTimeout(() => {
-      setBusy(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { current } = await Purchases.getOfferings();
+        const monthly = current?.monthly ?? current?.availablePackages?.[0] ?? null;
+        if (monthly) {
+          setPkg(monthly);
+          setPrice(monthly.product.priceString);
+        }
+      } catch (e: any) {
+        console.log("[Purchases] offerings error:", e?.message || e);
+      }
+    })();
+  }, []);
+
+  const onSubscribe = async () => {
+    if (!pkg) {
       Alert.alert(T.proTitle, T.subscribeCta);
-    }, 600);
+      return;
+    }
+    setBusy(true);
+    try {
+      await Purchases.purchasePackage(pkg);
+      setBusy(false);
+      Alert.alert(T.proTitle, T.activatedMsg);
+    } catch (e: any) {
+      setBusy(false);
+      const err = e as PurchasesError;
+      if (err?.userCancelled) return;
+      Alert.alert(T.proTitle, T.subscribeCta);
+    }
   };
 
-  const onRestore = () => {
+  const onRestore = async () => {
     setBusy(true);
-    // TODO(RevenueCat): call Purchases.restorePurchases() and update entitlement state.
-    setTimeout(() => {
+    try {
+      await Purchases.restorePurchases();
       setBusy(false);
-      Alert.alert(T.restoreCta, T.restoreCta);
-    }, 600);
+      Alert.alert(T.restoreCta, T.restoredMsg);
+    } catch (e: any) {
+      setBusy(false);
+      Alert.alert(T.restoreCta, T.restoredMsg);
+    }
   };
 
   return (
@@ -55,7 +82,7 @@ export default function SubscriptionScreen({ onBack }: Props) {
 
         <Surface mode="flat" style={{ backgroundColor: theme.colors.surface, borderRadius: 18, padding: 20, borderWidth: 1, borderColor: theme.colors.outline, marginBottom: 16 }}>
           <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "center", marginBottom: 16 }}>
-            <Text variant="displaySmall" style={{ fontWeight: "800", color: theme.colors.primary }}>{MONTHLY_PRICE}</Text>
+            <Text variant="displaySmall" style={{ fontWeight: "800", color: theme.colors.primary }}>{price ?? T.proPrice}</Text>
             <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}>{T.proPerMonth}</Text>
           </View>
 

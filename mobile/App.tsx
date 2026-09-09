@@ -6,6 +6,8 @@ import { View, ActivityIndicator, AppState, Platform } from "react-native";
 import { PaperProvider, MD3DarkTheme, MD3LightTheme } from "react-native-paper";
 import { requestTrackingPermissionsAsync, getTrackingPermissionsAsync } from "expo-tracking-transparency";
 import { supabase } from "./lib/supabase";
+import { REVENUECAT_ANDROID_KEY } from "./lib/config";
+import Purchases from "react-native-purchases";
 import CalorieTrackerScreen from "./screens/CalorieTrackerScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AboutScreen from "./screens/AboutScreen";
@@ -71,6 +73,16 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => setSession(Boolean(data.session)));
     const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setSession(Boolean(s)));
     return () => listener.subscription.unsubscribe();
+  }, []);
+
+  // Configure RevenueCat (Google Play) once at launch when a real SDK key is present.
+  useEffect(() => {
+    if (Platform.OS !== "android" || REVENUECAT_ANDROID_KEY.includes("HERE")) return;
+    try {
+      Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY });
+    } catch (e: any) {
+      console.log("[Purchases] configure error:", e?.message || e);
+    }
   }, []);
 
   useEffect(() => {
