@@ -11,9 +11,13 @@ export interface Env {
   SUPABASE_SECRET_KEY?: string;
   USAGE_METERING?: string;
   CALORIE_MONTHLY_LIMIT?: string;
+  // RevenueCat secret API key (Cloudflare secret). When set, the worker verifies the
+  // user's Pro entitlement server-side by device id and lets Pro bypass the allowance.
+  REVENUECAT_SECRET_KEY?: string;
 }
 
 const CALORIE_METRIC = "calorie_requests";
+const CALORIE_ENTITLEMENT = "pro_calories";
 const DEFAULT_MONTHLY_LIMIT = 30;
 
 function srHeaders(env: Env): Record<string, string> {
@@ -52,6 +56,31 @@ async function incrementUsage(env: Env, userId: string, metric: string, period: 
   if (!res.ok) return 0;
   const n = Number(await res.text());
   return Number.isFinite(n) ? n : 0;
+}
+
+// Server-side RevenueCat entitlement check by app_user_id (= device id).
+async function rcIsPro(env: Env, appUserId: string): Promise<boolean> {
+  if (!env.REVENUECAT_SECRET_KEY) return false;
+  try {
+    const res = await fetch(
+      `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`,
+      { headers: { Authorization: `Bearer ${env.REVENUECAT_SECRET_KEY}`, Accept: "application/json" } }
+    );
+    if (!res.ok) return false;
+    const data = (await res.json()) as {
+      subscriber?: { entitlements?: Record<string, { expires_date?: string | null }> };
+    };
+    const ent = data.subscriber?.entitlements?.[CALORIE_ENTITLEMENT];
+    if (!ent) return false;
+    if (!ent.expires_date) return true;
+    return new Date(ent.expires_date).getTime() > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function deviceIdOf(request: Request): string {
+  return request.headers.get("X-Device-Id")?.trim() || "";
 }
 
 // Nutrition prompt shared with the self-hosted pod (kept identical so output matches).
@@ -237,10 +266,12 @@ export default {
         }
         const userId = await resolveUserId(env, request);
         if (!userId) return jsonResponse({ error: "Missing device id" }, 401, headers);
+        const deviceId = deviceIdOf(request);
+        const isPro = deviceId ? await rcIsPro(env, deviceId) : false;
         const period = monthStartIso(new Date());
         const limit = Math.max(0, Number(env.CALORIE_MONTHLY_LIMIT) || DEFAULT_MONTHLY_LIMIT);
         const used = await readUsage(env, userId, CALORIE_METRIC, period);
-        return jsonResponse({ usage: { metric: CALORIE_METRIC, used, limit, reset: period } }, 200, headers);
+        return jsonResponse({ isPro, usage: { metric: CALORIE_METRIC, used, limit, reset: period } }, 200, headers);
       }
       return htmlResponse(LANDING_HTML, headers);
     }
@@ -257,17 +288,21 @@ export default {
     if (env.USAGE_METERING === "on" && env.SUPABASE_SECRET_KEY && env.SUPABASE_URL) {
       const userId = await resolveUserId(env, request);
       if (!userId) return jsonResponse({ error: "Missing device id" }, 401, headers);
-      const period = monthStartIso(new Date());
-      const limit = Math.max(0, Number(env.CALORIE_MONTHLY_LIMIT) || DEFAULT_MONTHLY_LIMIT);
-      const used = await readUsage(env, userId, CALORIE_METRIC, period);
-      if (used >= limit) {
-        return jsonResponse(
-          { error: "Monthly limit reached — try again next month.", usage: { metric: CALORIE_METRIC, used, limit, reset: period } },
-          429,
-          headers
-        );
+      const deviceId = deviceIdOf(request);
+      const isPro = deviceId ? await rcIsPro(env, deviceId) : false;
+      if (!isPro) {
+        const period = monthStartIso(new Date());
+        const limit = Math.max(0, Number(env.CALORIE_MONTHLY_LIMIT) || DEFAULT_MONTHLY_LIMIT);
+        const used = await readUsage(env, userId, CALORIE_METRIC, period);
+        if (used >= limit) {
+          return jsonResponse(
+            { error: "Monthly limit reached — try again next month.", usage: { metric: CALORIE_METRIC, used, limit, reset: period } },
+            429,
+            headers
+          );
+        }
+        await incrementUsage(env, userId, CALORIE_METRIC, period, 1);
       }
-      await incrementUsage(env, userId, CALORIE_METRIC, period, 1);
     }
 
     try {

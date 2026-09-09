@@ -21,6 +21,10 @@ export default function UsageMeter({ colors }: Props) {
         const res = await fetch(`${BASE}/api/usage`, { headers: { "X-Device-Id": deviceId } });
         const data = await res.json();
         if (active && res.ok && data?.usage) {
+          if (data.isPro) {
+            setState("off");
+            return;
+          }
           setUsed(Number(data.usage.used) || 0);
           setLimit(Number(data.usage.limit) || 0);
           setState("ok");
