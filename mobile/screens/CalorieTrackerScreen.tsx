@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, ScrollView, Image, ActivityIndicator, Alert, Modal, Switch, Linking, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
+import { View, ScrollView, Image, ActivityIndicator, Alert, Modal, Linking, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
 import { Camera, Pencil, Plus, Trash2, Utensils } from "lucide-react-native";
 import {
   Text, Card, Button, IconButton, ProgressBar,
@@ -212,10 +212,10 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
   function del(id: string) { saveLog(log.filter((e) => e.id !== id)); }
 
   const themeToggleFooter = onToggleTheme ? (
-    <View style={{ flexDirection: "column", gap: 10 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-        <Switch value={!isDark} onValueChange={onToggleTheme} trackColor={{ true: isDark ? "#ffffff" : "#111827", false: "#555" }} />
-      </View>
+    <View style={{ flexDirection: "column", gap: 10, alignItems: "center" }}>
+      <TouchableOpacity onPress={onToggleTheme} accessibilityLabel="Toggle theme" hitSlop={8} style={{ padding: 4 }}>
+        <Text style={{ fontSize: 26, color: theme.colors.onSurface }}>◐</Text>
+      </TouchableOpacity>
       <UsageMeter colors={{ text: theme.colors.onSurface, dim: theme.colors.onSurfaceVariant }} />
     </View>
   ) : undefined;
