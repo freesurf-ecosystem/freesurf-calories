@@ -1,4 +1,4 @@
-﻿name: Build Android
+name: Build Android
 
 # Production Android build: release-signed AAB (Google Play) + release-signed
 # APK (sideload). If the ANDROID_KEYSTORE_* secrets are absent, it falls back to
@@ -35,6 +35,11 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install dependencies
         working-directory: mobile
