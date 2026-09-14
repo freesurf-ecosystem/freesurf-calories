@@ -17,46 +17,33 @@ export default function AIConsentScreen({ onAgree }: Props) {
   const insets = useSafeAreaInsets();
   const [agreed, setAgreed] = useState(false);
 
-  const Link = ({ url, children }: { url: string; children: React.ReactNode }) => (
-    <Text style={{ color: theme.colors.primary, textDecorationLine: "underline" }} onPress={() => Linking.openURL(url)}>
-      {children}
-    </Text>
-  );
+  const linkStyle = { color: theme.colors.primary, textDecorationLine: "underline" as const };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: 24 }}>
-        <Text variant="headlineSmall" style={{ fontWeight: "800", marginBottom: 6 }}>Welcome to Calorie Tracker</Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 22, marginBottom: 20 }}>
-          Please review and accept the following to continue. You can stop using these features at any time.
+        <Text variant="headlineSmall" style={{ fontWeight: "800", marginBottom: 10 }}>Welcome to Calorie Tracker</Text>
+
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 22, marginBottom: 12 }}>
+          Please review and accept the following to continue. You can change your mind and stop using these features at any time.
         </Text>
 
-        <View style={{ backgroundColor: theme.colors.surfaceVariant, borderRadius: 14, padding: 16, marginBottom: 20 }}>
-          <Text variant="titleSmall" style={{ fontWeight: "700", marginBottom: 6 }}>How we use AI</Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 20 }}>{AI_COPY}</Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 20, marginTop: 10 }}>
-            Your content is used only to complete the request you make. It is not stored by us or used to train AI models. Details are in the{" "}
-            <Link url={AI_URL}>AI &amp; data processing</Link> section of our Privacy Policy.
-          </Text>
-        </View>
-
-        <View style={{ gap: 8, marginBottom: 12 }}>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Review before you agree:</Text>
-          <Text variant="bodyMedium">
-            <Link url={TERMS_URL}>Terms of Service</Link>
-            {"   ·   "}
-            <Link url={PRIVACY_URL}>Privacy Policy</Link>
-            {"   ·   "}
-            <Link url={AI_URL}>AI &amp; data processing</Link>
-          </Text>
-        </View>
+        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 22, marginBottom: 24 }}>
+          {AI_COPY} Your content is used only to complete the request you make. It is not stored by us or used to train AI models.
+        </Text>
 
         <Pressable onPress={() => setAgreed(!agreed)} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24, paddingVertical: 4 }}>
           <View style={{ width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: theme.colors.primary, alignItems: "center", justifyContent: "center", backgroundColor: agreed ? theme.colors.primary : "transparent" }}>
             {agreed && <Text style={{ color: theme.colors.onPrimary, fontWeight: "800", fontSize: 16 }}>✓</Text>}
           </View>
           <Text style={{ flex: 1, fontSize: 15, color: theme.colors.onSurface, lineHeight: 21 }}>
-            I agree to the Terms of Service and Privacy Policy, including how AI is used to process my data as described above.
+            I agree to the{" "}
+            <Text style={linkStyle} onPress={() => Linking.openURL(TERMS_URL)}>Terms of Service</Text>
+            {", the "}
+            <Text style={linkStyle} onPress={() => Linking.openURL(PRIVACY_URL)}>Privacy Policy</Text>
+            {", and "}
+            <Text style={linkStyle} onPress={() => Linking.openURL(AI_URL)}>how AI is used</Text>
+            {" to process my data."}
           </Text>
         </Pressable>
 
