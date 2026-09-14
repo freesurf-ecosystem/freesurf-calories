@@ -8,6 +8,7 @@ import { PaperProvider, MD3DarkTheme, MD3LightTheme } from "react-native-paper";
 import { supabase } from "./lib/supabase";
 import { REVENUECAT_ANDROID_KEY } from "./lib/config";
 import { getDeviceId } from "./lib/device";
+import { recordConsent } from "./lib/consent";
 import Purchases from "react-native-purchases";
 import CalorieTrackerScreen from "./screens/CalorieTrackerScreen";
 import AuthScreen from "./screens/AuthScreen";
@@ -81,6 +82,7 @@ export default function App() {
   const agreeAiConsent = async () => {
     setAiConsent(true);
     AsyncStorage.setItem(AI_CONSENT_KEY, "true").catch(() => {});
+    recordConsent();
   };
 
   useEffect(() => {

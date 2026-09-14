@@ -18,6 +18,7 @@ export interface Env {
 
 const CALORIE_METRIC = "calorie_requests";
 const CALORIE_ENTITLEMENT = "pro_calories";
+const CONSENT_VERSION = "2026-09-09";
 const DEFAULT_MONTHLY_LIMIT = 30;
 
 function srHeaders(env: Env): Record<string, string> {
@@ -81,6 +82,20 @@ async function rcIsPro(env: Env, appUserId: string): Promise<boolean> {
 
 function deviceIdOf(request: Request): string {
   return request.headers.get("X-Device-Id")?.trim() || "";
+}
+
+// Records a consent acceptance (append-only audit) keyed by the resolved user id.
+async function recordConsent(env: Env, userId: string, type: string, version: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/consents`, {
+      method: "POST",
+      headers: { ...srHeaders(env), "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ user_id: userId, type, version }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 // Nutrition prompt shared with the self-hosted pod (kept identical so output matches).
@@ -274,6 +289,19 @@ export default {
         return jsonResponse({ isPro, usage: { metric: CALORIE_METRIC, used, limit, reset: period } }, 200, headers);
       }
       return htmlResponse(LANDING_HTML, headers);
+    }
+
+    // ── Consent record (POST /api/consent) — audit trail, anonymous or account keyed ──
+    if (request.method === "POST" && url.pathname === "/api/consent") {
+      if (env.USAGE_METERING !== "on" || !env.SUPABASE_SECRET_KEY || !env.SUPABASE_URL) {
+        return jsonResponse({ ok: true }, 200, headers);
+      }
+      const userId = await resolveUserId(env, request);
+      if (!userId) return jsonResponse({ error: "Missing device id" }, 401, headers);
+      let body: { type?: string; version?: string } = {};
+      try { body = (await request.json()) as { type?: string; version?: string }; } catch {}
+      const ok = await recordConsent(env, userId, body.type || "terms", body.version || CONSENT_VERSION);
+      return jsonResponse({ ok }, ok ? 200 : 500, headers);
     }
 
     if (request.method !== "POST" || url.pathname !== "/api/analyze") {
