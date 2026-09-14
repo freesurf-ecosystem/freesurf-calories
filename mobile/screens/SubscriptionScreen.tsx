@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, ScrollView, Alert } from "react-native";
+import { View, ScrollView, Alert, Linking } from "react-native";
 import { Text, Button, Surface, useTheme, IconButton } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Crown, Check } from "lucide-react-native";
@@ -141,6 +141,13 @@ export default function SubscriptionScreen({ onBack }: Props) {
               {T.restoreCta}
             </Button>
             <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 6 }}>{T.cancelAnytime}</Text>
+            <View style={{ flexDirection: "row", justifyContent: "center", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, textDecorationLine: "underline" }} onPress={() => Linking.openURL("https://freesurf.tools/terms")}>{T.termsLink}</Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>·</Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, textDecorationLine: "underline" }} onPress={() => Linking.openURL("https://freesurf.tools/privacy")}>{T.privacyLink}</Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>·</Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, textDecorationLine: "underline" }} onPress={() => Linking.openURL("https://freesurf.tools/eula")}>{T.eulaLink}</Text>
+            </View>
           </>
         )}
       </Surface>

@@ -30,6 +30,7 @@ export const translations: Record<Lang, Strings> = {
     activatedMsg: "Subscription activated. Enjoy Pro!",
     restoredMsg: "Your purchases have been restored.",
     cancelAnytime: "Cancel anytime in Google Play or the App Store.",
+    termsLink: "Terms of Service", privacyLink: "Privacy Policy", eulaLink: "EULA",
     proNote: "Subscriptions keep the free tier free for everyone.",
   },
   es: {
