@@ -25,7 +25,7 @@ export default function AIConsentScreen({ onAgree }: Props) {
         <Text variant="headlineSmall" style={{ fontWeight: "800", marginBottom: 10 }}>Welcome to Calorie Tracker</Text>
 
         <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 22, marginBottom: 12 }}>
-          Please review and accept the following to continue. You can change your mind and stop using these features at any time.
+          Please review and accept the following to continue.
         </Text>
 
         <Text variant="titleMedium" style={{ fontWeight: "700", marginBottom: 8 }}>How we use AI</Text>
