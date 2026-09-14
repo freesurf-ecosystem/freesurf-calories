@@ -28,6 +28,8 @@ export default function AIConsentScreen({ onAgree }: Props) {
           Please review and accept the following to continue. You can change your mind and stop using these features at any time.
         </Text>
 
+        <Text variant="titleMedium" style={{ fontWeight: "700", marginBottom: 8 }}>How we use AI</Text>
+
         <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 22, marginBottom: 24 }}>
           {AI_COPY} Your content is used only to complete the request you make. It is not stored by us or used to train AI models.
         </Text>
