@@ -21,6 +21,7 @@ export const translations: Record<Lang, Strings> = {
     menuSupport: "Support",
     menuPrivacy: "Privacy",
     menuTerms: "Terms",
+    languageLabel: "Language",
     goPro: "Go Pro", proBadge: "PRO", proTitle: "Calorie Tracker Pro",
     proSubtitle: "Unlimited AI food logging for power users.",
     proPrice: "$20", proPerMonth: "/ month",
@@ -149,6 +150,32 @@ export function translationsFor(lang: Lang): Strings {
   return { ...en, ...(translations[lang] ?? {}) };
 }
 
+// Module-level shared language state so every component that calls useAppLanguage()
+// re-renders when the language changes (dashboard, menus, paywall, etc.).
+let currentCode: string | null = null;
+let loadedFlag = false;
+let loadPromise: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+
+function emit() {
+  listeners.forEach((l) => l());
+}
+
+function ensureLoaded() {
+  if (loadPromise) return loadPromise;
+  loadPromise = AsyncStorage.getItem(LANG_KEY)
+    .then((v) => { if (v) currentCode = v; })
+    .catch(() => {})
+    .finally(() => { loadedFlag = true; emit(); });
+  return loadPromise;
+}
+
+export function setAppLanguage(code: string) {
+  currentCode = code;
+  AsyncStorage.setItem(LANG_KEY, code).catch(() => {});
+  emit();
+}
+
 export function useAppLanguage(): {
   lang: Lang;
   loaded: boolean;
@@ -156,17 +183,19 @@ export function useAppLanguage(): {
   chosenCode: string | null;
   setLanguage: (code: string) => void;
 } {
-  const [chosenCode, setChosenCode] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [, force] = useState(0);
   useEffect(() => {
-    AsyncStorage.getItem(LANG_KEY)
-      .then((v) => { if (v) setChosenCode(v); setLoaded(true); })
-      .catch(() => setLoaded(true));
+    ensureLoaded();
+    const listener = () => force((n) => n + 1);
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
   }, []);
-  const lang = normalizeLang(chosenCode ?? deviceLang());
-  const setLanguage = (code: string) => {
-    setChosenCode(code);
-    AsyncStorage.setItem(LANG_KEY, code).catch(() => {});
+  const lang = normalizeLang(currentCode ?? deviceLang());
+  return {
+    lang,
+    loaded: loadedFlag,
+    chosen: loadedFlag && currentCode !== null,
+    chosenCode: currentCode,
+    setLanguage: setAppLanguage,
   };
-  return { lang, loaded, chosen: loaded && chosenCode !== null, chosenCode, setLanguage };
 }

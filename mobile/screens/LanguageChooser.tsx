@@ -2,7 +2,7 @@ import React from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { deviceLang, translations } from "../i18n";
 
-type Props = { onSelect: (code: string) => void };
+type Props = { onSelect: (code: string) => void; onBack?: () => void };
 
 const NAMES: Record<string, string> = {
   en: "English",
@@ -23,13 +23,18 @@ const NAMES: Record<string, string> = {
 };
 
 /** Shown on first launch: pick your app language. Only lists languages we actually translate. */
-export default function LanguageChooser({ onSelect }: Props) {
+export default function LanguageChooser({ onSelect, onBack }: Props) {
   const detected = deviceLang();
   const offered = Object.keys(translations).sort((a, b) => (NAMES[a] || a).localeCompare(NAMES[b] || b));
 
   return (
     <View style={styles.root}>
       <View style={styles.header}>
+        {onBack && (
+          <Pressable style={styles.back} onPress={onBack}>
+            <Text style={styles.backText}>‹ Back</Text>
+          </Pressable>
+        )}
         <Text style={styles.title}>Choose your language</Text>
         {translations[detected] && (
           <Pressable style={styles.detected} onPress={() => onSelect(detected)}>
@@ -54,6 +59,8 @@ export default function LanguageChooser({ onSelect }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
   header: { paddingHorizontal: 24, paddingTop: 70, paddingBottom: 16, gap: 10 },
+  back: { paddingVertical: 4, alignSelf: "flex-start" },
+  backText: { color: "#5b8cff", fontSize: 16, fontWeight: "600" },
   title: { fontSize: 26, fontWeight: "800", color: "#e8ecff" },
   detected: { alignSelf: "flex-start", borderWidth: 1, borderColor: "#3b6cff", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   detectedText: { color: "#5b8cff", fontWeight: "700" },

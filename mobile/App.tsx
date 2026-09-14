@@ -65,6 +65,7 @@ export type RootStackParamList = {
   Auth: undefined;
   About: undefined;
   Subscription: undefined;
+  Language: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -155,6 +156,11 @@ export default function App() {
         <Stack.Screen name="Subscription">
           {(props) => (
             <SubscriptionScreen onBack={() => props.navigation.goBack()} />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Language">
+          {(props) => (
+            <LanguageChooser onSelect={(code) => { setLanguage(code); props.navigation.goBack(); }} onBack={() => props.navigation.goBack()} />
           )}
         </Stack.Screen>
       </Stack.Navigator>
