@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { WORKER_URL } from "../lib/config";
 import { getDeviceId } from "../lib/device";
+import { translationsFor, useAppLanguage } from "../i18n";
 
 const BASE = WORKER_URL.replace(/\/api\/analyze$/, "");
 
@@ -9,6 +10,8 @@ type Props = { colors: { dim: string; text: string } };
 
 /** Shows how many of the monthly free analyses are left. Renders nothing when metering is off. */
 export default function UsageMeter({ colors }: Props) {
+  const { lang } = useAppLanguage();
+  const T = translationsFor(lang);
   const [state, setState] = useState<"loading" | "ok" | "off">("loading");
   const [used, setUsed] = useState(0);
   const [limit, setLimit] = useState(0);
@@ -38,8 +41,8 @@ export default function UsageMeter({ colors }: Props) {
   const pct = limit > 0 ? Math.min(1, used / limit) * 100 : 0;
   return (
     <View style={styles.wrap}>
-      <Text style={[styles.label, { color: colors.text }]}>Free credits</Text>
-      <Text style={[styles.value, { color: colors.dim }]}>{used} / {limit} this month</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{T.freeCredits}</Text>
+      <Text style={[styles.value, { color: colors.dim }]}>{used} / {limit} {T.thisMonth}</Text>
       <View style={[styles.track, { backgroundColor: colors.dim + "33" }]}>
         <View style={[styles.fill, { width: `${pct}%`, backgroundColor: colors.text }]} />
       </View>

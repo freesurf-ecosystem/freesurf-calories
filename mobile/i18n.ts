@@ -7,6 +7,7 @@ export type Lang = string;
 
 export const translations: Record<Lang, Strings> = {
   en: {
+    freeCredits: "Free credits", thisMonth: "this month",
     dailyGoal: "Daily calorie goal",
     quickAdd: "Quick Add",
     lookUpCalories: "Look up calories",
@@ -35,6 +36,7 @@ export const translations: Record<Lang, Strings> = {
     proNote: "Subscriptions keep the free tier free for everyone.",
   },
   es: {
+    freeCredits: "Créditos gratis", thisMonth: "este mes",
     goPro: "Hazte Pro", languageLabel: "Idioma",
     proSubtitle: "Registro de comidas con IA ilimitado para usuarios avanzados.",
     proPerMonth: "/ mes",
@@ -61,6 +63,7 @@ export const translations: Record<Lang, Strings> = {
     menuTerms: "Términos",
   },
   fr: {
+    freeCredits: "Crédits gratuits", thisMonth: "ce mois-ci",
     goPro: "Passer à Pro", languageLabel: "Langue",
     proSubtitle: "Journalisation alimentaire par IA illimitée pour les utilisateurs avancés.",
     proPerMonth: "/ mois",
@@ -77,6 +80,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Nom de l'aliment", menuSupport: "Assistance", menuPrivacy: "Confidentialité", menuTerms: "Conditions",
   },
   de: {
+    freeCredits: "Gratis-Credits", thisMonth: "diesen Monat",
     goPro: "Pro werden", languageLabel: "Sprache",
     proSubtitle: "Unbegrenztes KI-Lebensmittel-Logging für Power-User.",
     proPerMonth: "/ Monat",
@@ -93,6 +97,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Lebensmittelname", menuSupport: "Support", menuPrivacy: "Datenschutz", menuTerms: "Bedingungen",
   },
   it: {
+    freeCredits: "Crediti gratuiti", thisMonth: "questo mese",
     goPro: "Passa a Pro", languageLabel: "Lingua",
     proSubtitle: "Registro alimentare con IA illimitato per utenti esperti.",
     proPerMonth: "/ mese",
@@ -109,6 +114,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Nome alimento", menuSupport: "Supporto", menuPrivacy: "Privacy", menuTerms: "Termini",
   },
   pt: {
+    freeCredits: "Créditos grátis", thisMonth: "este mês",
     goPro: "Seja Pro", languageLabel: "Idioma",
     proSubtitle: "Registro de refeições com IA ilimitado para usuários avançados.",
     proPerMonth: "/ mês",
@@ -125,6 +131,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Nome do alimento", menuSupport: "Suporte", menuPrivacy: "Privacidade", menuTerms: "Termos",
   },
   ru: {
+    freeCredits: "Бесплатные кредиты", thisMonth: "в этом месяце",
     goPro: "Перейти на Pro", languageLabel: "Язык",
     proSubtitle: "Неограниченное ведение дневника питания с ИИ для опытных пользователей.",
     proPerMonth: "/ месяц",
@@ -141,6 +148,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Название продукта", menuSupport: "Поддержка", menuPrivacy: "Конфиденциальность", menuTerms: "Условия",
   },
   tr: {
+    freeCredits: "Ücretsiz krediler", thisMonth: "bu ay",
     goPro: "Pro'ya Geç", languageLabel: "Dil",
     proSubtitle: "Güç kullanıcıları için sınırsız yapay zeka yemek kaydı.",
     proPerMonth: "/ ay",
@@ -157,6 +165,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Yiyecek adı", menuSupport: "Destek", menuPrivacy: "Gizlilik", menuTerms: "Koşullar",
   },
   hi: {
+    freeCredits: "मुफ्त क्रेडिट", thisMonth: "इस माह",
     goPro: "Pro लें", languageLabel: "भाषा",
     proSubtitle: "पावर यूज़र्स के लिए असीमित AI भोजन लॉगिंग।",
     proPerMonth: "/ माह",
@@ -173,6 +182,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "खाद्य का नाम", menuSupport: "सहायता", menuPrivacy: "गोपनीयता", menuTerms: "शर्तें",
   },
   id: {
+    freeCredits: "Kredit gratis", thisMonth: "bulan ini",
     goPro: "Jadi Pro", languageLabel: "Bahasa",
     proSubtitle: "Pencatatan makanan AI tanpa batas untuk pengguna mahir.",
     proPerMonth: "/ bulan",
@@ -189,6 +199,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Nama makanan", menuSupport: "Dukungan", menuPrivacy: "Privasi", menuTerms: "Ketentuan",
   },
   vi: {
+    freeCredits: "Tín dụng miễn phí", thisMonth: "tháng này",
     goPro: "Nâng cấp Pro", languageLabel: "Ngôn ngữ",
     proSubtitle: "Ghi nhật ký bữa ăn bằng AI không giới hạn cho người dùng nâng cao.",
     proPerMonth: "/ tháng",
@@ -205,6 +216,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "Tên thực phẩm", menuSupport: "Hỗ trợ", menuPrivacy: "Quyền riêng tư", menuTerms: "Điều khoản",
   },
   th: {
+    freeCredits: "เครดิตฟรี", thisMonth: "เดือนนี้",
     goPro: "อัปเกรด Pro", languageLabel: "ภาษา",
     proSubtitle: "บันทึกอาหารด้วย AI ไม่จำกัดสำหรับผู้ใช้ขั้นสูง",
     proPerMonth: "/ เดือน",
@@ -221,6 +233,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "ชื่ออาหาร", menuSupport: "การสนับสนุน", menuPrivacy: "ความเป็นส่วนตัว", menuTerms: "ข้อกำหนด",
   },
   ja: {
+    freeCredits: "無料クレジット", thisMonth: "今月",
     goPro: "Pro にする", languageLabel: "言語",
     proSubtitle: "パワーユーザー向けの無制限AI食事記録。",
     proPerMonth: "/ 月",
@@ -237,6 +250,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "食品名", menuSupport: "サポート", menuPrivacy: "プライバシー", menuTerms: "利用規約",
   },
   ko: {
+    freeCredits: "무료 크레딧", thisMonth: "이번 달",
     goPro: "Pro로 업그레이드", languageLabel: "언어",
     proSubtitle: "파워 유저를 위한 무제한 AI 식사 기록.",
     proPerMonth: "/ 월",
@@ -253,6 +267,7 @@ export const translations: Record<Lang, Strings> = {
     foodName: "음식 이름", menuSupport: "지원", menuPrivacy: "개인정보", menuTerms: "약관",
   },
   zh: {
+    freeCredits: "免费额度", thisMonth: "本月",
     goPro: "升级 Pro", languageLabel: "语言",
     proSubtitle: "为高级用户提供无限 AI 饮食记录。",
     proPerMonth: "/ 月",
