@@ -7,8 +7,21 @@ import Purchases from "react-native-purchases";
 import { translationsFor, useAppLanguage } from "../i18n";
 
 const PRO_ENTITLEMENT = "pro_calories";
+const PRODUCT_ID = "freesurf_calories_monthly";
 
 type Props = { onBack: () => void };
+
+// RevenueCat offerings are project-scoped, so `offerings.current` is the project default.
+// Pick the offering that actually contains THIS app's product (by id), falling back to current.
+async function getMonthlyPackage() {
+  const offerings = await Purchases.getOfferings();
+  const all = offerings.all ?? {};
+  const match = Object.values(all).find((o) =>
+    o.availablePackages?.some((p) => (p.product?.identifier || "").includes(PRODUCT_ID))
+  );
+  const offering = match ?? offerings.current ?? null;
+  return offering?.monthly ?? offering?.availablePackages?.[0] ?? null;
+}
 
 export default function SubscriptionScreen({ onBack }: Props) {
   const theme = useTheme();
@@ -37,8 +50,7 @@ export default function SubscriptionScreen({ onBack }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        const { current } = await Purchases.getOfferings();
-        const monthly = current?.monthly ?? current?.availablePackages?.[0] ?? null;
+        const monthly = await getMonthlyPackage();
         if (monthly) setPrice(monthly.product.priceString);
       } catch (e: any) {
         console.log("[Purchases] offerings error:", e?.message || e);
@@ -51,8 +63,7 @@ export default function SubscriptionScreen({ onBack }: Props) {
     if (!price && isPro) return;
     setBusy(true);
     try {
-      const { current } = await Purchases.getOfferings();
-      const monthly = current?.monthly ?? current?.availablePackages?.[0] ?? null;
+      const monthly = await getMonthlyPackage();
       if (!monthly) {
         setBusy(false);
         return;
