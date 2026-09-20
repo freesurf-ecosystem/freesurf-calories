@@ -43,6 +43,46 @@ const NAMES: Record<string, string> = {
   ha: "Hausa",
 };
 
+/** English name for each language, shown to the right of the native name. */
+const ENGLISH: Record<string, string> = {
+  en: "English",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  it: "Italian",
+  pt: "Portuguese",
+  ru: "Russian",
+  tr: "Turkish",
+  hi: "Hindi",
+  id: "Indonesian",
+  vi: "Vietnamese",
+  th: "Thai",
+  ja: "Japanese",
+  ko: "Korean",
+  zh: "Chinese",
+  ms: "Malay",
+  tl: "Filipino",
+  nl: "Dutch",
+  pl: "Polish",
+  sv: "Swedish",
+  no: "Norwegian",
+  da: "Danish",
+  fi: "Finnish",
+  cs: "Czech",
+  el: "Greek",
+  ro: "Romanian",
+  hu: "Hungarian",
+  uk: "Ukrainian",
+  ar: "Arabic",
+  bn: "Bengali",
+  ur: "Urdu",
+  mr: "Marathi",
+  te: "Telugu",
+  ta: "Tamil",
+  fa: "Persian",
+  ha: "Hausa",
+};
+
 /** Shown on first launch: pick your app language. Only lists languages we actually translate. */
 export default function LanguageChooser({ onSelect, onBack }: Props) {
   const detected = deviceLang();
@@ -70,6 +110,7 @@ export default function LanguageChooser({ onSelect, onBack }: Props) {
         renderItem={({ item }) => (
           <Pressable style={styles.row} onPress={() => onSelect(item)}>
             <Text style={styles.rowText}>{NAMES[item] || item}</Text>
+            <Text style={styles.rowEnglish}>{ENGLISH[item] || item}</Text>
           </Pressable>
         )}
       />
@@ -86,6 +127,10 @@ const styles = StyleSheet.create({
   detected: { alignSelf: "flex-start", borderWidth: 1, borderColor: "#3b6cff", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   detectedText: { color: "#5b8cff", fontWeight: "700" },
   list: { paddingBottom: 40 },
-  row: { paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#1a1a1a" },
-  rowText: { color: "#e8ecff", fontSize: 16 },
+  row: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#1a1a1a",
+  },
+  rowText: { color: "#e8ecff", fontSize: 16, flexShrink: 1 },
+  rowEnglish: { color: "#5f6b7a", fontSize: 14, marginLeft: 12 },
 });
