@@ -6,6 +6,8 @@ export interface Env {
   POD_URL: string;
   TOGETHER_API_KEY?: string;
   TOGETHER_MODEL?: string;
+  // Multilingual text model used to translate English food names into the user's language.
+  TOGETHER_TRANSLATE_MODEL?: string;
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
   SUPABASE_SECRET_KEY?: string;
@@ -110,6 +112,65 @@ RULES:
 - Units: whole (single items), cup, oz, g, tbsp, tsp, slice, piece, bowl
 - Calories are NOT needed — they are calculated from macros`;
 
+// App language codes → English language names (used only for the translation prompt).
+const LANG_NAMES: Record<string, string> = {
+  en: "English", es: "Spanish", pt: "Portuguese", hi: "Hindi", id: "Indonesian",
+  ms: "Malay", th: "Thai", vi: "Vietnamese", tl: "Filipino", de: "German",
+  fr: "French", it: "Italian", nl: "Dutch", pl: "Polish", sv: "Swedish",
+  no: "Norwegian", da: "Danish", fi: "Finnish", cs: "Czech", el: "Greek",
+  ro: "Romanian", hu: "Hungarian", uk: "Ukrainian", ru: "Russian", ar: "Arabic",
+  bn: "Bengali", ur: "Urdu", mr: "Marathi", te: "Telugu", ta: "Tamil",
+  fa: "Persian", tr: "Turkish", ko: "Korean", ja: "Japanese", zh: "Chinese",
+  ha: "Hausa",
+};
+
+function parseStringArray(text: string): string[] | null {
+  const clean = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const start = clean.indexOf("[");
+  const end = clean.lastIndexOf("]");
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    const parsed = JSON.parse(clean.slice(start, end + 1));
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map((x) => String(x));
+  } catch {
+    return null;
+  }
+}
+
+// Food detection stays in English (the vision model is only reliable in en/zh); this
+// second pass localizes just the food names with a broadly multilingual text model.
+async function translateNames(names: string[], lang: string, env: Env): Promise<string[]> {
+  const language = LANG_NAMES[lang];
+  if (!env.TOGETHER_API_KEY || !names.length || lang === "en" || !language) return names;
+  try {
+    const model = env.TOGETHER_TRANSLATE_MODEL || "Qwen/Qwen3.5-9B";
+    const res = await fetch("https://api.together.xyz/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
+      body: JSON.stringify({
+        model,
+        temperature: 0.1,
+        max_tokens: 500,
+        messages: [
+          {
+            role: "system",
+            content: `You are a translator. Translate each food name into ${language}. Use the short, natural name a native speaker would say. Respond with ONLY a JSON array of strings in the same order. No explanation, no notes.`,
+          },
+          { role: "user", content: JSON.stringify(names) },
+        ],
+      }),
+    });
+    const data = (await res.json()) as any;
+    if (!res.ok) return names;
+    const parsed = parseStringArray(data?.choices?.[0]?.message?.content || "");
+    if (!parsed || parsed.length !== names.length) return names;
+    return parsed;
+  } catch {
+    return names;
+  }
+}
+
 // Detect the MIME type of a base64 image from its leading signature bytes so we can
 // build a correct data: URI for vision APIs.
 function sniffImageMime(base64: string): string {
@@ -146,6 +207,7 @@ function parseItems(text: string): any[] | null {
 async function analyzeWithTogether(
   imageBase64: string,
   foodDescription: string,
+  lang: string,
   env: Env
 ): Promise<{ items: any[] }> {
   const model = env.TOGETHER_MODEL || "zai-org/glm-5.3-flash";
@@ -179,7 +241,10 @@ async function analyzeWithTogether(
   if (!items) {
     throw new Error("Model did not return valid JSON");
   }
-  return { items: calcCalories(items) };
+  const calculated = calcCalories(items);
+  const names = await translateNames(calculated.map((it) => String(it?.name || "")), lang, env);
+  const localized = calculated.map((it, i) => ({ ...it, name: names[i] || it.name }));
+  return { items: localized };
 }
 
 const ALLOWED_ORIGINS = [
@@ -334,7 +399,7 @@ export default {
     }
 
     try {
-      const body = (await request.json()) as { image_base64?: string; food_description?: string };
+      const body = (await request.json()) as { image_base64?: string; food_description?: string; lang?: string };
       if (!body.image_base64 && !body.food_description) {
         return jsonResponse({ error: "No image or description provided" }, 400, headers);
       }
@@ -342,7 +407,7 @@ export default {
       // Hosted Together AI path (vision LLM). Falls back to the self-hosted pod when
       // no key is set, so this is a safe per-app flag.
       if (env.TOGETHER_API_KEY) {
-        const data = await analyzeWithTogether(body.image_base64 || "", body.food_description || "", env);
+        const data = await analyzeWithTogether(body.image_base64 || "", body.food_description || "", body.lang || "en", env);
         return jsonResponse(data, 200, headers);
       }
 

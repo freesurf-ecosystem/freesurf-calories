@@ -5,7 +5,51 @@ import {
   Text, Card, Button, IconButton, ProgressBar,
   TextInput, Surface, useTheme, FAB,
 } from "react-native-paper";
-import { DatePickerModal } from "react-native-paper-dates";
+import {
+  DatePickerModal, registerTranslation,
+  en, es, fr, de, it, pt, ru, tr, hi, id, th, ja, ko, zh,
+  nl, pl, sv, da, fi, cs, el, ro, ar, ukUA, noNO,
+} from "react-native-paper-dates";
+
+// The date picker only localizes locales that have been registered.
+registerTranslation("en", en);
+registerTranslation("es", es);
+registerTranslation("fr", fr);
+registerTranslation("de", de);
+registerTranslation("it", it);
+registerTranslation("pt", pt);
+registerTranslation("ru", ru);
+registerTranslation("tr", tr);
+registerTranslation("hi", hi);
+registerTranslation("id", id);
+registerTranslation("th", th);
+registerTranslation("ja", ja);
+registerTranslation("ko", ko);
+registerTranslation("zh", zh);
+registerTranslation("nl", nl);
+registerTranslation("pl", pl);
+registerTranslation("sv", sv);
+registerTranslation("da", da);
+registerTranslation("fi", fi);
+registerTranslation("cs", cs);
+registerTranslation("el", el);
+registerTranslation("ro", ro);
+registerTranslation("ar", ar);
+// Package codes differ from ours for these two.
+registerTranslation("uk", ukUA);
+registerTranslation("no", noNO);
+// react-native-paper-dates has no translation for these; fall back to English.
+registerTranslation("vi", en);
+registerTranslation("ms", en);
+registerTranslation("tl", en);
+registerTranslation("hu", en);
+registerTranslation("bn", en);
+registerTranslation("ur", en);
+registerTranslation("mr", en);
+registerTranslation("te", en);
+registerTranslation("ta", en);
+registerTranslation("fa", en);
+registerTranslation("ha", en);
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -70,7 +114,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
   const wd = Array.from({ length: 7 }, (_, i) => {
     const d = subDays(new Date(), 6 - i);
     const c = Math.round(log.filter((e) => isSameDay(new Date(e.ts), d)).reduce((s, e) => s + e.items.reduce((a, i) => a + i.calories, 0), 0));
-    return { l: d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2), c, selected: isSameDay(d, selectedDate) };
+    return { l: d.toLocaleDateString(lang, { weekday: "short" }).slice(0, 2), c, selected: isSameDay(d, selectedDate) };
   });
 
   async function openCam() {
@@ -110,7 +154,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
       console.log("[Analyze] reading file as base64...");
       const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
       console.log("[Analyze] base64 length:", b64?.length ?? 0);
-      const body = JSON.stringify({ image_base64: b64 });
+      const body = JSON.stringify({ image_base64: b64, lang });
       console.log("[Analyze] sending to:", `${WORKER_URL}/api/analyze`, "body size:", body.length);
       const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body });
       console.log("[Analyze] response status:", res.status);
@@ -163,7 +207,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
     const desc = [item.qty, item.unit, item.name].filter(Boolean).join(" ");
     if (!desc.trim()) return;
     try {
-      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body: JSON.stringify({ food_description: desc }) });
+      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body: JSON.stringify({ food_description: desc, lang }) });
       const data = await res.json();
       if (data.error || !data.items?.[0]) { Alert.alert("Error", "Could not estimate nutrition."); return; }
       const est = data.items[0];
@@ -180,7 +224,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
     if (!desc.trim()) return;
     setIsEstimating(true);
     try {
-      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body: JSON.stringify({ food_description: desc }) });
+      const res = await fetch(`${WORKER_URL}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Id": await getDeviceId() }, body: JSON.stringify({ food_description: desc, lang }) });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       const item = (data.items || [])[0];
@@ -234,7 +278,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 24 }}>
           <Surface style={{ borderRadius: 16, padding: 24 }}>
             <Text variant="titleMedium" style={{ fontWeight: "700", marginBottom: 16 }}>{T.dailyGoal}</Text>
-            <TextInput mode="outlined" label="Calories" value={goalInput} onChangeText={setGoalInput} keyboardType="numeric" />
+            <TextInput mode="outlined" label={T.caloriesLabel} value={goalInput} onChangeText={setGoalInput} keyboardType="numeric" />
             <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 20 }}>
               <Button onPress={() => setShowGoalDialog(false)}>{T.cancel}</Button>
               <Button mode="contained" onPress={() => { const g = Number(goalInput) || 2000; saveGoal(g); setShowGoalDialog(false); }}>{T.save}</Button>
@@ -259,41 +303,45 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <TextInput mode="outlined" style={{ flex: 1 }} value={item.name} onChangeText={(v) => updItem(item.id, "name", v)} placeholder={T.foodName} dense />
                     <TextInput mode="outlined" style={{ width: 50, fontSize: 13 }} value={item.qty} onChangeText={(v) => updItem(item.id, "qty", v)} placeholder="1" dense keyboardType="numeric" />
-                  <UnitPicker item={item} onChange={(v) => updItem(item.id, "unit", v)} theme={theme} />
+                  <UnitPicker item={item} onChange={(v) => updItem(item.id, "unit", v)} theme={theme} T={T} />
                     <IconButton icon="refresh" size={16} onPress={() => reEstimateItem(item)} />
                     <IconButton icon="close" size={18} iconColor={theme.colors.error} onPress={() => rmItem(item.id)} />
                   </View>
                   <View style={{ flexDirection: "row", gap: 6 }}>
-                    <MI l="Cal" v={Math.round(item.calories)} onChange={(v) => updItem(item.id, "calories", v, item)} theme={theme} />
-                    <MI l="Prot" v={Math.round(item.protein * 10) / 10} onChange={(v) => updItem(item.id, "protein", v, item)} theme={theme} />
-                    <MI l="Carbs" v={Math.round(item.carbs * 10) / 10} onChange={(v) => updItem(item.id, "carbs", v, item)} theme={theme} />
-                    <MI l="Fat" v={Math.round(item.fat * 10) / 10} onChange={(v) => updItem(item.id, "fat", v, item)} theme={theme} />
+                    <MI l={T.calShort} v={Math.round(item.calories)} onChange={(v) => updItem(item.id, "calories", v, item)} theme={theme} />
+                    <MI l={T.protShort} v={Math.round(item.protein * 10) / 10} onChange={(v) => updItem(item.id, "protein", v, item)} theme={theme} />
+                    <MI l={T.carbsShort} v={Math.round(item.carbs * 10) / 10} onChange={(v) => updItem(item.id, "carbs", v, item)} theme={theme} />
+                    <MI l={T.fatShort} v={Math.round(item.fat * 10) / 10} onChange={(v) => updItem(item.id, "fat", v, item)} theme={theme} />
                   </View>
                 </Card.Content>
               </Card>
             ))}
-            <Button mode="outlined" onPress={addItem}>+ Add food item</Button>
+            <Button mode="outlined" onPress={addItem}>{T.addFoodItem}</Button>
           </ScrollView>
         </View>
       </Modal>
 
       {/* Quick add modal */}
       <Modal visible={showAddManual} transparent animationType="fade">
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "85%" }}>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
             <Text variant="titleLarge" style={{ fontWeight: "700", marginBottom: 16 }}>{T.quickAdd}</Text>
-            <TextInput mode="outlined" label="Food name" value={manualItem.name} onChangeText={(v) => setManualItem({ ...manualItem, name: v })} style={{ marginBottom: 12 }} />
+            <TextInput mode="outlined" label={T.foodName} value={manualItem.name} onChangeText={(v) => setManualItem({ ...manualItem, name: v })} style={{ marginBottom: 12 }} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <TextInput mode="outlined" label="Amount" value={manualItem.qty} onChangeText={(v) => setManualItem({ ...manualItem, qty: v })} keyboardType="numeric" dense style={{ width: 80, fontSize: 13 }} />
-              <UnitPicker item={{ unit: manualItem.unit }} onChange={(v) => setManualItem({ ...manualItem, unit: v })} theme={theme} />
+              <TextInput mode="outlined" label={T.amountLabel} value={manualItem.qty} onChangeText={(v) => setManualItem({ ...manualItem, qty: v })} keyboardType="numeric" dense style={{ width: 80, fontSize: 13 }} />
+              <UnitPicker item={{ unit: manualItem.unit }} onChange={(v) => setManualItem({ ...manualItem, unit: v })} theme={theme} T={T} />
             </View>
             <Button mode="outlined" loading={isEstimating} onPress={estimateFood} style={{ marginBottom: 16 }} icon="magnify">{T.lookUpCalories}</Button>
             <View style={{ flexDirection: "row", gap: 6 }}>
-              <MI l="Cal" v={Number(manualItem.calories) || 0} onChange={(v) => setManualItem({ ...manualItem, calories: v })} theme={theme} />
-              <MI l="Prot" v={Number(manualItem.protein) || 0} onChange={(v) => setManualItem({ ...manualItem, protein: v })} theme={theme} />
-              <MI l="Carbs" v={Number(manualItem.carbs) || 0} onChange={(v) => setManualItem({ ...manualItem, carbs: v })} theme={theme} />
-              <MI l="Fat" v={Number(manualItem.fat) || 0} onChange={(v) => setManualItem({ ...manualItem, fat: v })} theme={theme} />
+              <MI l={T.calShort} v={Number(manualItem.calories) || 0} onChange={(v) => setManualItem({ ...manualItem, calories: v })} theme={theme} />
+              <MI l={T.protShort} v={Number(manualItem.protein) || 0} onChange={(v) => setManualItem({ ...manualItem, protein: v })} theme={theme} />
+              <MI l={T.carbsShort} v={Number(manualItem.carbs) || 0} onChange={(v) => setManualItem({ ...manualItem, carbs: v })} theme={theme} />
+              <MI l={T.fatShort} v={Number(manualItem.fat) || 0} onChange={(v) => setManualItem({ ...manualItem, fat: v })} theme={theme} />
             </View>
             <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
               <Button mode="outlined" style={{ flex: 1 }} onPress={() => { setShowAddManual(false); setManualItem({ name: "", qty: "1", unit: "", calories: "", protein: "", carbs: "", fat: "" }); }}>{T.cancel}</Button>
@@ -302,6 +350,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
             </ScrollView>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Date Selector Header */}
@@ -310,10 +359,10 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
           <IconButton icon="chevron-left" size={22} onPress={() => setSelectedDate((d) => subDays(d, 1))} />
           <View style={{ alignItems: "center", flex: 1 }}>
             <Text variant="titleMedium" style={{ fontWeight: "700" }}>
-              {isToday ? "Today" : selectedDate.toLocaleDateString(undefined, { weekday: "long" })}
+              {isToday ? T.today : selectedDate.toLocaleDateString(lang, { weekday: "long" })}
             </Text>
             <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {selectedDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}
+              {selectedDate.toLocaleDateString(lang, { month: "long", day: "numeric" })}
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -332,7 +381,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
         </View>
       </View>
       <DatePickerModal
-        locale="en"
+        locale={lang}
         mode="single"
         visible={showDatePicker}
         date={selectedDate}
@@ -346,18 +395,18 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
         <Card style={{ margin: 16 }} mode="contained">
           <Card.Content style={{ gap: 12 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-              <Text variant="displaySmall" style={{ fontWeight: "800" }}>{tc.toLocaleString()}</Text>
+              <Text variant="displaySmall" style={{ fontWeight: "800" }}>{tc.toLocaleString(lang)}</Text>
               <TouchableGoal goal={goal} onPress={() => { setGoalInput(String(goal)); setShowGoalDialog(true); }} />
             </View>
             <View>
               <ProgressBar progress={goal > 0 ? Math.min(1, tc / goal) : 0} color={tc > goal ? theme.colors.error : theme.colors.primary} style={{ height: 8, borderRadius: 4 }} />
               <Text variant="labelSmall" style={{ marginTop: 4, color: rem > 0 ? theme.colors.onSurfaceVariant : theme.colors.error }}>
-                {rem > 0 ? `${rem.toLocaleString()} cal left` : "Goal met"}
+                {rem > 0 ? T.calLeft.replace("{n}", rem.toLocaleString(lang)) : T.goalMet}
               </Text>
             </View>
-            <MacroBar label="Protein" value={tp} unit="g" color={theme.colors.primary} />
-            <MacroBar label="Carbs" value={tcb} unit="g" color="#f0a060" />
-            <MacroBar label="Fat" value={tf} unit="g" color={theme.colors.error} />
+            <MacroBar label={T.proteinLabel} value={tp} unit="g" color={theme.colors.primary} />
+            <MacroBar label={T.carbsLabel} value={tcb} unit="g" color="#f0a060" />
+            <MacroBar label={T.fatLabel} value={tf} unit="g" color={theme.colors.error} />
           </Card.Content>
         </Card>
 
@@ -386,7 +435,7 @@ export default function CalorieTrackerScreen({ isLoggedIn, onSignIn, isDark, onT
             <Utensils size={48} color={theme.colors.onSurfaceVariant} />
             <Text variant="titleMedium" style={{ fontWeight: "600", marginTop: 12 }}>{T.noMeals}</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
-              {isToday ? "Tap the camera to log your first meal" : "No data for this day"}
+              {isToday ? T.tapCamera : T.noDataForDay}
             </Text>
           </View>
         ) : todayMeals.map((e) => (
@@ -439,13 +488,13 @@ function TouchableGoal({ goal, onPress }: { goal: number; onPress: () => void })
   );
 }
 
-function UnitPicker({ item, onChange, theme }: { item: { unit?: string }; onChange: (v: string) => void; theme: any }) {
+function UnitPicker({ item, onChange, theme, T }: { item: { unit?: string }; onChange: (v: string) => void; theme: any; T: Record<string, string> }) {
   const [open, setOpen] = useState(false);
   return (
     <View style={{ alignItems: "center" }}>
-      <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600", marginBottom: 2 }}>Unit</Text>
+      <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600", marginBottom: 2 }}>{T.unit}</Text>
       <Button mode="outlined" compact style={{ height: 40, minWidth: 70 }} onPress={() => setOpen(true)} labelStyle={{ fontSize: 12 }}>
-        {item.unit || "select"}
+        {item.unit || T.selectLabel}
       </Button>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 40 }} activeOpacity={1} onPress={() => setOpen(false)}>
@@ -454,7 +503,7 @@ function UnitPicker({ item, onChange, theme }: { item: { unit?: string }; onChan
               {UNITS.map((u) => (
                 <Button key={u} mode="text" onPress={() => { onChange(u); setOpen(false); }}
                   textColor={item.unit === u ? theme.colors.primary : theme.colors.onSurface}>
-                  {u || "(none)"}
+                  {u || T.noneLabel}
                 </Button>
               ))}
             </ScrollView>
@@ -479,7 +528,7 @@ function MacroBar({ label, value, unit, color }: { label: string; value: number;
   const theme = useTheme();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-      <Text variant="labelSmall" style={{ width: 44, color: theme.colors.onSurfaceVariant }}>{label}</Text>
+      <Text variant="labelSmall" style={{ width: 72, color: theme.colors.onSurfaceVariant }}>{label}</Text>
       <ProgressBar progress={Math.min(1, value / Math.max(value, 50))} color={color} style={{ flex: 1, height: 6, borderRadius: 3 }} />
       <Text variant="labelSmall" style={{ width: 44, textAlign: "right", color: theme.colors.onSurfaceVariant }}>{value}{unit}</Text>
     </View>
