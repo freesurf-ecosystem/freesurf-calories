@@ -13,4 +13,4 @@ ENVIRONMENT = "production"
 #   POD_URL   — the consolidated AI pod URL (e.g. https://<pod-id>-8000.proxy.runpod.net)
 #   TOGETHER_API_KEY — when set, analysis runs on Together AI (hosted) instead of the pod
 #   TOGETHER_MODEL   — optional hosted vision model override (default zai-org/glm-5.3-flash)
-#   TOGETHER_TRANSLATE_MODEL — optional multilingual model for food-name translation (default Qwen/Qwen3.5-9B)
+#   TOGETHER_TRANSLATE_MODEL — optional multilingual model for food-name translation (default zai-org/GLM-5.3-Flash)

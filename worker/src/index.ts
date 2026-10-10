@@ -147,7 +147,7 @@ async function translateNames(names: string[], lang: string, env: Env): Promise<
   if (!language) { console.log("[calorie][translate] unknown lang code:", lang); return names; }
   if (!env.TOGETHER_API_KEY) { console.log("[calorie][translate] TOGETHER_API_KEY not set — skipping"); return names; }
   try {
-    const model = env.TOGETHER_TRANSLATE_MODEL || "Qwen/Qwen3.5-9B";
+    const model = env.TOGETHER_TRANSLATE_MODEL || "zai-org/GLM-5.3-Flash";
     console.log(`[calorie][translate] translating ${names.length} name(s) to ${language} via ${model}:`, JSON.stringify(names));
     const res = await fetch("https://api.together.xyz/v1/chat/completions", {
       method: "POST",
