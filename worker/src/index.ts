@@ -162,6 +162,7 @@ async function translateStrings(strings: string[], kind: string, lang: string, e
         model,
         temperature: 0.1,
         max_tokens: 500,
+        reasoning_effort: "low",
         messages: [
           {
             role: "system",
