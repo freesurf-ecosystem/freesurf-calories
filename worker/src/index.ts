@@ -142,9 +142,13 @@ function parseStringArray(text: string): string[] | null {
 // second pass localizes just the food names with a broadly multilingual text model.
 async function translateNames(names: string[], lang: string, env: Env): Promise<string[]> {
   const language = LANG_NAMES[lang];
-  if (!env.TOGETHER_API_KEY || !names.length || lang === "en" || !language) return names;
+  if (!names.length) return names;
+  if (lang === "en") { console.log("[calorie][translate] lang=en — skipping"); return names; }
+  if (!language) { console.log("[calorie][translate] unknown lang code:", lang); return names; }
+  if (!env.TOGETHER_API_KEY) { console.log("[calorie][translate] TOGETHER_API_KEY not set — skipping"); return names; }
   try {
     const model = env.TOGETHER_TRANSLATE_MODEL || "Qwen/Qwen3.5-9B";
+    console.log(`[calorie][translate] translating ${names.length} name(s) to ${language} via ${model}:`, JSON.stringify(names));
     const res = await fetch("https://api.together.xyz/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
@@ -162,11 +166,20 @@ async function translateNames(names: string[], lang: string, env: Env): Promise<
       }),
     });
     const data = (await res.json()) as any;
-    if (!res.ok) return names;
-    const parsed = parseStringArray(data?.choices?.[0]?.message?.content || "");
-    if (!parsed || parsed.length !== names.length) return names;
+    if (!res.ok) {
+      console.log(`[calorie][translate] model error ${res.status}:`, JSON.stringify(data).slice(0, 400));
+      return names;
+    }
+    const rawContent = data?.choices?.[0]?.message?.content || "";
+    const parsed = parseStringArray(rawContent);
+    if (!parsed || parsed.length !== names.length) {
+      console.log(`[calorie][translate] parse mismatch — got ${parsed?.length ?? "null"}, expected ${names.length}:`, rawContent.slice(0, 400));
+      return names;
+    }
+    console.log("[calorie][translate] success:", JSON.stringify(parsed));
     return parsed;
-  } catch {
+  } catch (e) {
+    console.log("[calorie][translate] exception:", e instanceof Error ? e.message : String(e));
     return names;
   }
 }
@@ -407,9 +420,11 @@ export default {
       // Hosted Together AI path (vision LLM). Falls back to the self-hosted pod when
       // no key is set, so this is a safe per-app flag.
       if (env.TOGETHER_API_KEY) {
+        console.log(`[calorie][analyze] Together path — lang="${body.lang || "en"}", hasImage=${!!body.image_base64}`);
         const data = await analyzeWithTogether(body.image_base64 || "", body.food_description || "", body.lang || "en", env);
         return jsonResponse(data, 200, headers);
       }
+      console.log("[calorie][analyze] POD path (no TOGETHER_API_KEY) — food names will NOT be translated");
 
       const podRes = await fetch(env.POD_URL, {
         method: "POST",
