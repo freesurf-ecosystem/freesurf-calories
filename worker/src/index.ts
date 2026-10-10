@@ -139,16 +139,22 @@ function parseStringArray(text: string): string[] | null {
 }
 
 // Food detection stays in English (the vision model is only reliable in en/zh); this
-// second pass localizes just the food names with a broadly multilingual text model.
-async function translateNames(names: string[], lang: string, env: Env): Promise<string[]> {
+// second pass localizes food names AND units with a broadly multilingual text model.
+// Dedupes inputs (units repeat) and returns a map so callers can map back in order.
+async function translateStrings(strings: string[], kind: string, lang: string, env: Env): Promise<Map<string, string>> {
   const language = LANG_NAMES[lang];
-  if (!names.length) return names;
-  if (lang === "en") { console.log("[calorie][translate] lang=en — skipping"); return names; }
-  if (!language) { console.log("[calorie][translate] unknown lang code:", lang); return names; }
-  if (!env.TOGETHER_API_KEY) { console.log("[calorie][translate] TOGETHER_API_KEY not set — skipping"); return names; }
+  const unique = [...new Set(strings.map((s) => String(s ?? "").trim()).filter(Boolean))];
+  const identity = new Map(unique.map((s) => [s, s]));
+  if (!unique.length || lang === "en" || !language || !env.TOGETHER_API_KEY) {
+    if (unique.length) {
+      const why = lang === "en" ? "lang=en" : !language ? `unknown lang ${lang}` : "no TOGETHER_API_KEY";
+      console.log(`[calorie][translate] skipping ${kind}s — ${why}`);
+    }
+    return identity;
+  }
   try {
     const model = env.TOGETHER_TRANSLATE_MODEL || "zai-org/GLM-5.3-Flash";
-    console.log(`[calorie][translate] translating ${names.length} name(s) to ${language} via ${model}:`, JSON.stringify(names));
+    console.log(`[calorie][translate] translating ${unique.length} ${kind}(s) to ${language} via ${model}:`, JSON.stringify(unique));
     const res = await fetch("https://api.together.xyz/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
@@ -159,28 +165,29 @@ async function translateNames(names: string[], lang: string, env: Env): Promise<
         messages: [
           {
             role: "system",
-            content: `You are a translator. Translate each food name into ${language}. Use the short, natural name a native speaker would say. Respond with ONLY a JSON array of strings in the same order. No explanation, no notes.`,
+            content: `You are a translator. Translate each ${kind} into ${language}. Use the short, natural form a native speaker would use. Respond with ONLY a JSON array of strings in the same order. No explanation, no notes.`,
           },
-          { role: "user", content: JSON.stringify(names) },
+          { role: "user", content: JSON.stringify(unique) },
         ],
       }),
     });
     const data = (await res.json()) as any;
     if (!res.ok) {
-      console.log(`[calorie][translate] model error ${res.status}:`, JSON.stringify(data).slice(0, 400));
-      return names;
+      console.log(`[calorie][translate] model error ${res.status} for ${kind}:`, JSON.stringify(data).slice(0, 400));
+      return identity;
     }
     const rawContent = data?.choices?.[0]?.message?.content || "";
     const parsed = parseStringArray(rawContent);
-    if (!parsed || parsed.length !== names.length) {
-      console.log(`[calorie][translate] parse mismatch — got ${parsed?.length ?? "null"}, expected ${names.length}:`, rawContent.slice(0, 400));
-      return names;
+    if (!parsed || parsed.length !== unique.length) {
+      console.log(`[calorie][translate] parse mismatch for ${kind} — got ${parsed?.length ?? "null"}, expected ${unique.length}:`, rawContent.slice(0, 400));
+      return identity;
     }
-    console.log("[calorie][translate] success:", JSON.stringify(parsed));
-    return parsed;
+    const map = new Map(unique.map((s, i) => [s, parsed[i] || s]));
+    console.log(`[calorie][translate] success for ${kind}:`, JSON.stringify([...map.entries()]));
+    return map;
   } catch (e) {
     console.log("[calorie][translate] exception:", e instanceof Error ? e.message : String(e));
-    return names;
+    return identity;
   }
 }
 
@@ -255,8 +262,13 @@ async function analyzeWithTogether(
     throw new Error("Model did not return valid JSON");
   }
   const calculated = calcCalories(items);
-  const names = await translateNames(calculated.map((it) => String(it?.name || "")), lang, env);
-  const localized = calculated.map((it, i) => ({ ...it, name: names[i] || it.name }));
+  const nameMap = await translateStrings(calculated.map((it) => String(it?.name || "")), "food name", lang, env);
+  const unitMap = await translateStrings(calculated.map((it) => String(it?.unit || "")), "unit", lang, env);
+  const localized = calculated.map((it) => ({
+    ...it,
+    name: nameMap.get(String(it?.name || "")) || it.name,
+    unit: unitMap.get(String(it?.unit || "")) || it.unit,
+  }));
   return { items: localized };
 }
 
