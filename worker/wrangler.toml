@@ -14,3 +14,24 @@ ENVIRONMENT = "production"
 #   TOGETHER_API_KEY — when set, analysis runs on Together AI (hosted) instead of the pod
 #   TOGETHER_MODEL   — optional hosted vision model override (default zai-org/glm-5.3-flash)
 #   TOGETHER_TRANSLATE_MODEL — optional multilingual model for food-name translation (default zai-org/GLM-5.3-Flash)
+
+# Observability — persist Worker logs so console.* output (and our [calorie] debug
+# lines) is visible in the Cloudflare dashboard.
+[observability]
+enabled = false
+head_sampling_rate = 1
+redact_query_string = false
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = false
+head_sampling_rate = 1
+persist = true
+
+[observability.issues]
+enabled = true
